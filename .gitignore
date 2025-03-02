@@ -1,3 +1,8 @@
+# ignored files
+Note_technique.docx
+client_secret_CLIENTID.json
+Test.ipynb
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
