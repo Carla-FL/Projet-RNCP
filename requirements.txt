@@ -1,11 +1,13 @@
 google-api-python-client
 google-auth-oauthlib 
 google-auth-httplib2
+textblob-fr
 pandas
 numpy
 matplotlib
 spacy
 gensim
+pyldavis
 scipy == 1.10
 langdetect
 transformers
