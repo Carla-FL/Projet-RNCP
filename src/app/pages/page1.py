@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from src.utils.load import Load
 from src.utils.extraction import Extraction
+from wordcloud import WordCloud
 
 
 
@@ -79,6 +80,19 @@ def get_kpi(db, videoid):
     like_count = db[videoid].find_one(sort=[("likeCount", -1)])["likeCount"]
     
     return viedo_title, synchronisation_date, total_comments, most_liked_comment, like_count
+
+
+def make_wordcloud(text):
+    """
+    Génère un nuage de mots à partir d'un texte donné.
+    
+    Args:
+        text (str): Le texte à analyser pour le nuage de mots.
+    
+    Returns:
+        None
+    """
+    pass
 
 
 def main():
