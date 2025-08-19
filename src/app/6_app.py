@@ -1,0 +1,104 @@
+import sys
+sys.path.append("/Users/carla/Desktop/GitHub/Projet-RNCP")
+import streamlit as st
+from pages import page1, page2
+
+st.set_page_config(layout="wide",
+                page_title="YOU REVIEW ANALYSER")
+
+st.logo("/Users/carla/Desktop/GitHub/Projet-RNCP/ressources/incon.png", size="large",)
+
+
+pages = {
+    " 1 - Accueil": page1.main,
+    " 2 - Analyse de sentiment": page2.main
+}
+
+st.sidebar.title('Navigation')
+p = st.sidebar.radio('Aller à  ', list(pages.keys()))
+
+st.sidebar.markdown("-------------------")
+
+pages[p]()
+
+# def eda(url):
+#     """_summary_
+
+#     Args:
+#         url (_type_): _description_
+#     """
+#     client = Load.data_base_connexion()
+#     # Accès à la base et la collection
+#     db = client[Extraction(url).channel_id]
+#     collection = db[Extraction(video_url=url).video_id]
+
+#     # Chargement des documents dans un DataFrame
+#     data = list(collection.find())
+#     df = pd.DataFrame(data)
+#     # afficher les graphiques en se connectant à la base de données MongoDB
+#     # le nombre de commentaires par jour
+#     df['date'] = df['publishedAt'].dt.date
+#     df['date'].value_counts().sort_index().plot(kind='bar', figsize=(12, 6))
+#     plt.title('Nombre de commentaires par jour')
+#     plt.xlabel('Date')
+#     plt.ylabel('Nombre de commentaires')
+#     plt.xticks(rotation=45)
+#     plt.tight_layout()
+
+
+
+#     eda(url)
+
+
+
+# # mentions légales et CGU et politique de confidentialité
+
+# # mettre une barre latérale vers toutes les pages de l'application
+# # Page d'ajout d'expressions
+# FICHIER_EXPRESSIONS = "extra_expressions.txt"
+
+# # Chargement du dictionnaire existant
+# if os.path.exists(FICHIER_EXPRESSIONS):
+#     with open(FICHIER_EXPRESSIONS, "r", encoding="utf-8") as f:
+#         expressions = json.load(f)
+# else:
+#     expressions = {}
+
+# st.title("📝 Ajouter des expressions normalisées")
+
+# # Interface déroulante
+# if st.button("➕ Ajouter des expressions"):
+#     st.session_state["ajout_visible"] = not st.session_state.get("ajout_visible", False)
+
+# if st.session_state.get("ajout_visible", False):
+#     st.markdown("### Nouvelle(s) expression(s)")
+    
+#     if "form_inputs" not in st.session_state:
+#         st.session_state.form_inputs = [{"text": "", "cleaned": ""}]
+
+#     # Afficher les champs dynamiques
+#     for i, entry in enumerate(st.session_state.form_inputs):
+#         st.session_state.form_inputs[i]["text"] = st.text_input(f"Expression {i+1}", value=entry["text"], key=f"expr_{i}")
+#         st.session_state.form_inputs[i]["cleaned"] = st.text_input(f"Version normalisée {i+1}", value=entry["cleaned"], key=f"clean_{i}")
+    
+#     # Bouton pour ajouter un champ
+#     if st.button("➕ Ajouter un champ"):
+#         st.session_state.form_inputs.append({"text": "", "cleaned": ""})
+
+#     # Validation
+#     if st.button("✅ Enregistrer"):
+#         new_entries = {}
+#         for entry in st.session_state.form_inputs:
+#             key = entry["text"].strip().lower()
+#             val = entry["cleaned"].strip().lower()
+#             if key and val:
+#                 new_entries[key] = val
+#         # Mise à jour du fichier
+#         expressions.update(new_entries)
+#         with open(FICHIER_EXPRESSIONS, "w", encoding="utf-8") as f:
+#             json.dump(expressions, f, ensure_ascii=False, indent=4)
+        
+#         st.success(f"{len(new_entries)} expression(s) ajoutée(s) au fichier.")
+#         st.session_state.form_inputs = []  # reset après ajout
+
+# # Page d'ajouts de stopwords
