@@ -16,7 +16,10 @@ from unidecode import unidecode
 from gensim.models import Word2Vec
 from gensim.utils import simple_preprocess
 from prefect import task, flow, get_run_logger
-from prefect.cache_policies import NO_CACHE
+from transformers import pipeline
+
+
+#from prefect.cache_policies import NO_CACHE
 
 
 nlp = spacy.load("fr_core_news_sm")
@@ -27,7 +30,7 @@ s_stemmer = SnowballStemmer("french")
 """ ________________________________________________________________  nettoyage ________________________________________________________________"""
 # ÉCRIRE UN FICHIER AVEC LES EXTRAS STOPWORDS ET LES EXPRESSIONS que l'utilisateur pourra agrémenter : 
 # appel de la fonction s'il y a un input, ouverture et écriture des lignes supplémentaires, sauvegarde du document pour utilisation
-#@task(name='expressions_frequentes', cache_policy=NO_CACHE, description="Remplace les expressions fréquentes par leur version normalisée")
+## @task(name='expressions_frequentes', cache_policy=NO_CACHE, description="Remplace les expressions fréquentes par leur version normalisée")
 def expressions_frequentes(text, path='extra_expressions.txt'):
     with open(path, 'r') as file:
         expressions = json.load(file)
@@ -35,7 +38,7 @@ def expressions_frequentes(text, path='extra_expressions.txt'):
         text = re.sub(key, value, text.lower())
     return text
 
-#@task(name='reduire_repetitions', cache_policy=NO_CACHE, description="Réduit les répétitions de lettres dans les mots")
+## @task(name='reduire_repetitions', cache_policy=NO_CACHE, description="Réduit les répétitions de lettres dans les mots")
 def reduire_repetitions(mot):
     """
     nettoyage des répétitions de lettres
@@ -44,7 +47,7 @@ def reduire_repetitions(mot):
     """
     return re.sub(r'(.)\1{2,}', r'\1', mot)
 
-# @task(name='preprocessing_task', description="Tâche de prétraitement des données textuelles")
+# # @task(name='preprocessing_task', description="Tâche de prétraitement des données textuelles")
 def preprocessing(text, join=True, methode='lemma', extra_stopwords : list = None, extra_punctuation : list = None, extra_pattern : re.Pattern=None, path='extra_expressions.txt'):
     if not isinstance(text, str):
         raise ValueError(f"Expected a string, but got {type(text)} : {text}")
@@ -54,7 +57,7 @@ def preprocessing(text, join=True, methode='lemma', extra_stopwords : list = Non
     
     text = expressions_frequentes(text, path=path)  # Remplacer les expressions fréquentes par leur version normalisée
 
-    # pattern = re.compile(r"(http://\S+|@\S+|.*\d.*|.*\#.*)") 
+    # pattern = re.compile(r"(http://\S+|# @\S+|.*\d.*|.*\#.*)") 
     pattern = re.compile(r'http.+')
 
     # Tokenisation et nettoyage en une seule passe
@@ -94,7 +97,7 @@ def get_sentence_vector(text, model):
     else:
         return np.zeros(model.vector_size)
     
-# @task(name='w2vec_vector_creation', description="Extraction des vecteurs de phrases à partir du modèle Word2Vec")
+# # @task(name='w2vec_vector_creation', description="Extraction des vecteurs de phrases à partir du modèle Word2Vec")
 def get_w2vec_vector(df, text='comment_clean_lem'):
     """
     Obtenir le vecteur d'une phrase en utilisant le modèle Word2Vec
@@ -128,14 +131,20 @@ def get_tfidf_vector(df, text='comment_clean_lem'):
 """ ________________________________________________________________    analyse  ________________________________________________________________"""
 @task(name='sentiment_model_creation', description="Création du modèle d'analyse des sentiments")
 def get_sentiment_model(path='/Users/carla/Desktop/GitHub/Projet-RNCP/src/utils/bestmodel.pkl'):
-    with open(path, 'rb') as fichier_modele:
-        model = pickle.load(fichier_modele)
+    # with open(path, 'rb') as fichier_modele:
+    #     model = pickle.load(fichier_modele)
+    model = pipeline(
+    "sentiment-analysis", 
+    model="cardiffnlp/twitter-xlm-roberta-base-sentiment-multilingual"
+)
     return model
 
 @task(name='sentiment_analyse', description="Analyse des sentiments des commentaires")
-def get_sentiment(df, model, text='w2vec_vector'):
+def get_sentiment(df,model, text='comment'):
     model = get_sentiment_model() 
-    df['sentiment'] = df[text].apply(lambda x: model.predict([x])[0])
+    # df['sentiment'] = df[text].apply(lambda x: model.predict([x])[0])
+    df['sentiment']= df[text].apply(lambda x: model(x)[0].get('label'))
+    df['sentiment_score'] = df[text].apply(lambda x: model(x)[0].get('score'))
     return df
 
 
@@ -158,7 +167,7 @@ def main_transformation(df, comment = 'comment', path='extra_expressions.txt'):
         logger.info("Vectorisation tfidf des données terminée avec succès.")
 
         # Sentiment Analysis
-        df = get_sentiment(df, model=None, text='w2vec_vector')  # Remplacez 'model' par votre modèle de sentiment
+        df = get_sentiment(df,model=None, text='comment')  # Remplacez 'model' par votre modèle de sentiment
         return df # video_id, channel_id
     except Exception as e:
         logger.error(f"Erreur lors de la transformation des données : {e}")
@@ -167,7 +176,7 @@ def main_transformation(df, comment = 'comment', path='extra_expressions.txt'):
 # if __name__ == "__main__":
     # df = pd.read_csv('database.csv',parse_dates=['publishedAt','extractedAt'])
     # df = main_extraction()  # Assuming main() returns a DataFrame with a 'comment' column
-    # # pattern = re.compile(r"(http://\S+|@\S+|.*\d.*|.*\#.*)") 
+    # # pattern = re.compile(r"(http://\S+|# @\S+|.*\d.*|.*\#.*)") 
     # df['tokens_clean_lem'] = df['comment'].astype(str).apply(lambda x: preprocessing(x, join=False, extra_stopwords=['vidéo','vidéos','video','videos','.', 'jsuis', 'heyy', 'faire'], extra_punctuation=[']']))
     # df['comment_clean_lem'] = df['comment'].astype(str).apply(lambda x: preprocessing(x, join=True, extra_stopwords=['vidéo','vidéos','video','videos','.', 'jsuis', 'heyy', 'faire'], extra_punctuation=[']']))
     # df, video_id, channel_id = Extraction.main_tranformation()

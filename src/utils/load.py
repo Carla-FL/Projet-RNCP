@@ -43,7 +43,7 @@ class Load:
         except FileNotFoundError:
             raise FileNotFoundError("Le fichier de configuration est introuvable.")
 
-    @task(name='data_base_connexion_task', description="Tâche de connexion à la base de données MongoDB")
+    @task(name='data_base_connexion_task', description="Tâche de connexion à la base de données MongoDB", retries=3, retry_delay_seconds=5)
     def data_base_connexion(self):
         """
         Fonction pour se connecter à la base de données MongoDB.
@@ -75,7 +75,7 @@ class Load:
         print("Connexion à MongoDB fermée.")
 
 
-    @task(name='check_exisitng_data_task', description="Tâche de vérification de l'existence des données dans MongoDB")
+    # @task(name='check_exisitng_data_task', description="Tâche de vérification de l'existence des données dans MongoDB")
     def check_exisitng_data(self, db_name:str, collection_name:str):
         """
         Vérifie si une collection existe déjà dans la base de données.
@@ -135,7 +135,7 @@ class Load:
         collection = db[video_id] # indentifiant de la video
 
         if self.maj == True:
-            logger.info("Mise à jour des données dans MongoDB...")
+            # logger.info("Mise à jour des données dans MongoDB...")
             comments_data = df.to_dict('records')
             operations = [UpdateOne(
                     {"id": comment["id"]},
@@ -150,7 +150,7 @@ class Load:
 
         else :
             # Insertion
-            logger.info("Insertion des données dans MongoDB...")
+            # logger.info("Insertion des données dans MongoDB...")
             collection.insert_many(df.to_dict(orient="records"))
             logger.info("Données insérées avec succès dans MongoDB.")
             self.data_base_deconnexion(client)

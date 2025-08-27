@@ -42,7 +42,7 @@ class Extraction :
     @task(name='get_data_task', description="Tâche d'extraction des données YouTube")
     # appel de l'API
     def get_data(self):
-        logger = get_run_logger()
+        #logger = get_run_logger()
         api_key = self.api_key # .get_key() #
         youtube = build("youtube", "v3", developerKey=api_key)
 

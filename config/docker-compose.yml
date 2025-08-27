@@ -13,17 +13,6 @@ services:
     volumes:
       - mongo-data:/data/db
 
-  prefect-server :
-    image: prefecthq/prefect:3-python3.10
-    container_name: prefect-server
-    ports:
-      - "4200:4200"
-      - "4201:4201"
-    entrypoint: ["prefect", "server", "start"]
-    command : ["--host", "0.0.0.0", "--port", "4200"]
-    environment:
-      PREFECT_API_URL: "http://localhost:4200/api"
-
 
 volumes:
   mongo-data:

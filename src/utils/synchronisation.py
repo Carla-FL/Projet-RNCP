@@ -10,7 +10,7 @@ from prefect import flow, get_run_logger
 
 # écraser l'ancienne base et la mettre à jours avec les nouvelles données
 
-@flow(name='mise_a_jour', description="Pipeline de mise à jour des données YouTube")
+@flow(name='mise_a_jour', description="Pipeline de mise à jour des données YouTube", retries=1, retry_delay_seconds=60)
 def maj():
     # etape 0 : se connecter à la base de données MongoDB
     logger = get_run_logger()
@@ -47,10 +47,11 @@ def maj():
                 # last_comment_ids.append(last_comment_id['id'])
             else:
                 pass # ajouter un truc pour ajouter les info s'il n'y a pas d'url ajouter un paramètre a main_etl
-    
+    loader.data_base_deconnexion(client)
     for url in list_urls:
+        
         logger.info(f"main_etl s'execute avec les paramètres :{url}" )
         main_etl(url, maj=True)  # Appel de la fonction main_etl pour chaque URL
 
 if __name__ == "__main__":
-    maj.serve(name="mise_a_jour", schedule=Interval( timedelta(minutes=60), anchor_date=datetime(2025, 8, 16, 19, 0), timezone="Europe/Paris")) #cron="0 10 * * MON")  # Lancer la mise à jour    
+    maj.serve(name="mise_a_jour", schedule=Interval( timedelta(minutes=60), anchor_date=datetime(2025, 8, 23, 15, 0), timezone="Europe/Paris")) #cron="0 10 * * MON")  # Lancer la mise à jour    
