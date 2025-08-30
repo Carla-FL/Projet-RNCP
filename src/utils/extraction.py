@@ -14,35 +14,33 @@ load_dotenv()
 """ ________________________________________________________________  Fonctions  ________________________________________________________________"""
 class Extraction :
     def __init__(self, video_url:str =""):
+        
         self.api_key = os.getenv('DEVELOPER_KEY')
         self.video_url = video_url
         #self.last_comment = last_comment  # id du commentaire le plus récent
         self.video_id = self.url2id()
         self.channel_id = None
-        self.existing_comments_id = None
+        # self.existing_comments_id = None
+        
     
     
     # récupérer l'id de la vidéo à partir de l'URL
     def url2id(self):
+        #logger = get_run_logger()
         pattern = r'^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/|v\/)|youtu\.be\/)([\w-]{11})(\S+)?$'
         if re.match(pattern, self.video_url) :
+            #logger.info(f"Valid YouTube URL : {self.video_url}")
             print("Valid YouTube URL")
+            video_id = self.video_url.split("v=")[-1][:11]
+            return video_id
         else:
             raise ValueError('Error : invalid YouTube URL')
 
-        video_id = self.video_url.split("v=")[-1][:11]
-        return video_id
-
-    # récupère le secret id pour l'appel d'API : faire os.getenv('DEVELOPER_KEY') ou lire dans un fichier
-    # def get_key(self):
-    #     with open('secret_clientid.txt', 'r') as file:
-    #         DEVELOPER_KEY = file.read()
-    #     return DEVELOPER_KEY
 
     @task(name='get_data_task', description="Tâche d'extraction des données YouTube")
     # appel de l'API
     def get_data(self):
-        #logger = get_run_logger()
+        logger = get_run_logger()
         api_key = self.api_key # .get_key() #
         youtube = build("youtube", "v3", developerKey=api_key)
 
@@ -57,13 +55,18 @@ class Extraction :
                 part="snippet,statistics",
                 id=video_id
             ).execute()
-
-            video_info = video_response["items"][0]["snippet"]
-            self.channel_id = video_info["channelId"]
-            self.exisitng_comments_id =  Load().check_exisitng_data(self.channel_id, self.video_id)
-            
+            logger.info(f"Récupération des infos de la vidéo pour l'ID : {video_id}")
         except Exception as e:
             raise RuntimeError(f"Impossible de récupérer les infos de la vidéo : {e}")
+
+        try:
+            video_info = video_response["items"][0]["snippet"]
+            self.channel_id = video_info["channelId"]
+            # self.exisitng_comments_id =  Load().check_exisitng_data(self.channel_id, self.video_id)
+            logger.info(f"ID de la chaîne : {self.channel_id}")
+            
+        except Exception as e:
+            raise RuntimeError(f"Impossible de récupérer l'id de la chaine' : {e}")
         
 
         # Vérifier la langue de la chaîne
@@ -89,7 +92,10 @@ class Extraction :
         
 
         # Étape 3 – Collecte des commentaires
-        print("Langue valide \n"
+        # print("Langue valide \n"
+        # "Nombre de commentaires suffisant \n"
+        # "Récupération des commentaires en cours...")
+        logger.info("Langue valide \n"
         "Nombre de commentaires suffisant \n"
         "Récupération des commentaires en cours...")
 
@@ -134,14 +140,17 @@ class Extraction :
             time.sleep(1)
 
         print(f'data uploaded')
+        logger.info(f'data uploaded')
         return comments_data
 
     # Fonction pour créer un DataFrame à partir des données collectées
     def get_data_table(self)-> pd.DataFrame:
+        #logger = get_run_logger()
         # Création du DataFrame à partir des données collectées
         df = pd.DataFrame(self.get_data())
         # print(df.head())
         print(f"Total de commentaires récupérés : {df.shape[0]}")
+        #logger.info(f"Total de commentaires récupérés : {df.shape[0]}")
         return df
     
     @flow(name='extraction_pipeline', description="Pipeline d'extraction des données YouTube")

@@ -7,7 +7,7 @@ import os
 from dotenv import load_dotenv
 from prefect import flow, task
 from prefect import get_run_logger
-from pymongo import UpdateOne
+from pymongo import UpdateOne, DeleteMany, InsertOne
 # from .transformation import main_transformation
 # from .extraction import Extraction
 load_dotenv()
@@ -135,17 +135,23 @@ class Load:
         collection = db[video_id] # indentifiant de la video
 
         if self.maj == True:
-            # logger.info("Mise à jour des données dans MongoDB...")
+            # # logger.info("Mise à jour des données dans MongoDB...")
             comments_data = df.to_dict('records')
-            operations = [UpdateOne(
-                    {"id": comment["id"]},
-                    {"$set": comment},
-                    upsert=True)
-                for comment in comments_data
-            ]
+            # operations = [UpdateOne(
+            #         {"id": comment["id"]},
+            #         {"$set": comment},
+            #         upsert=True)
+            #     for comment in comments_data
+            # ]
 
-            if operations:
-                collection.bulk_write(operations)
+            # if operations:
+            #     collection.bulk_write(operations)
+            # Supprime tous les documents existants
+            db[video_id].delete_many({})
+            # Insère tous les nouveaux documents
+            db[video_id].insert_many(comments_data)
+
+
             self.data_base_deconnexion(client)
 
         else :

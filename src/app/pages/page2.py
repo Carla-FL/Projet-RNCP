@@ -79,7 +79,7 @@ def sentiment_kpi(client, db, videoid):
 
     color_map = {'positive': '#28a745','negative': '#dc3545', 'neutral': '#ffc107','mixed': '#6c757d', 1:'#28a745', 2:'#dc3545'}
     colors = [color_map.get(sentiment, '#6c757d') for sentiment in sentiment_labels]
-    st.write(color_map)
+    # st.write(color_map)
 
     fig = px.pie(df, values="Valeur", names="Sentiment", title="Répartition des sentiments", color_discrete_sequence=colors)
 

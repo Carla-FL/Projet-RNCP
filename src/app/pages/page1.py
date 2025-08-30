@@ -95,19 +95,22 @@ def main():
             st.error("le champ de l'URL ne peut pas être vide.")   
             return 
         try:
-            videoid = Extraction(video_url=url).url2id()
+            extract = Extraction(video_url=url)
+            videoid = extract.url2id()
             st.session_state['videoid'] = videoid
         except Exception as e:
-            st.error(f"Erreur veuillez entrer une URL youyube valide. : {e}")
+            st.error(f"Erreur veuillez entrer une URL You Tube valide. : {e}")
+            raise Exception(f"Erreur veuillez entrer une URL You Tube valide. : {e}")
         
         client = Load().data_base_connexion()
         st.session_state['client_mdb'] = client
 
         try:
             db_name = get_existing_db(client, videoid)
-            st.session_state['data_base_name'] = db_name
+            st.session_state['data_base_name'] = str(db_name)
         except Exception as e:
             st.error(f"Erreur lors de get_existing_db : {e}")
+            raise Exception(f"Erreur lors de get_existing_db : {e}")
 
         try:
             db = client[db_name]
@@ -117,7 +120,7 @@ def main():
         except Exception as e:
             data_exists = False
             st.error(f"Les données n'existent pas encore, on lance l'extration des données ...")
-
+        
             if not data_exists:
                 with st.spinner("Wait for it...", show_time=True):
                     chanel_id = main_etl(url, with_channel_id=True)
@@ -128,7 +131,7 @@ def main():
 
             except Exception as e:
                 st.error(f"Erreur lors de l'extraction du channel_id : {e}")
-                return
+                raise Exception(f"Erreur lors de l'extraction du channel_id : {e}")
 
         if db is not None:
             

@@ -18,10 +18,6 @@ from gensim.utils import simple_preprocess
 from prefect import task, flow, get_run_logger
 from transformers import pipeline
 
-
-#from prefect.cache_policies import NO_CACHE
-
-
 nlp = spacy.load("fr_core_news_sm")
 stopwords = list(nlp.Defaults.stop_words)
 punctuation = list(string.punctuation)
@@ -133,14 +129,11 @@ def get_tfidf_vector(df, text='comment_clean_lem'):
 def get_sentiment_model(path='/Users/carla/Desktop/GitHub/Projet-RNCP/src/utils/bestmodel.pkl'):
     # with open(path, 'rb') as fichier_modele:
     #     model = pickle.load(fichier_modele)
-    model = pipeline(
-    "sentiment-analysis", 
-    model="cardiffnlp/twitter-xlm-roberta-base-sentiment-multilingual"
-)
+    model = pipeline("sentiment-analysis", model="cardiffnlp/twitter-xlm-roberta-base-sentiment-multilingual", truncation=True,max_length=512)
     return model
 
 @task(name='sentiment_analyse', description="Analyse des sentiments des commentaires")
-def get_sentiment(df,model, text='comment'):
+def get_sentiment(df, model, text='comment'):
     model = get_sentiment_model() 
     # df['sentiment'] = df[text].apply(lambda x: model.predict([x])[0])
     df['sentiment']= df[text].apply(lambda x: model(x)[0].get('label'))
