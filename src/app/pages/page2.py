@@ -10,6 +10,8 @@ from src.utils.load import Load
 from src.utils.extraction import Extraction
 import plotly.express as px
 from src.utils.topicmodeling import TopicModeling
+from src.utils.redis_cahce import get_redis_client
+
 
 def topic_kpi(df):
     topic_counts = df.groupby(['topic_keywords']).size().reset_index(name='count')
@@ -52,7 +54,6 @@ def topic_kpi(df):
     st.plotly_chart(fig, use_container_width=True)
 
 
-
 def sentiment_kpi(client, db, videoid):
 
     collection = client[db][videoid]
@@ -92,12 +93,14 @@ def topic_modeling(client, db, videoid):
     
     pass
 
+
 def sentiment_choice():
     options = st.multiselect(
     "Quel sentiment souhaitez-vous afficher ?",
     ["positive", "negative", "neutral"]
 )
     return options
+
 
 def exemple_data (client,db,  videoid, sentiments:list=None):
     st.write("Exemple de données pour les sentiments sélectionnés :")
@@ -122,7 +125,6 @@ def exemple_data (client,db,  videoid, sentiments:list=None):
             st.dataframe(dfnet, use_container_width=True)
 
 
-
 def main():
     url = st.session_state['url_input']
     # st.write(f"URL de la vidéo analysée : {url}")
@@ -131,6 +133,20 @@ def main():
     db = st.session_state.get('data_base_name', None)
     # st.write(f"Nom de la base de données : {db}")
     client = Load().data_base_connexion()
+
+    redis_client = get_redis_client()
+    if redis_client:
+        with st.expander("Statut du Cache Redis"):
+            try:
+                info = redis_client.info('memory')
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Mémoire Redis", f"{info['used_memory'] / (1024*1024):.1f} MB")
+                with col2:
+                    keys = redis_client.keys("topic_model:*")
+                    st.metric("Modèles en cache", len(keys))
+            except:
+                st.info("Informations Redis non disponibles")
 
     sentiment_kpi(client, db, videoid)
 
@@ -161,7 +177,7 @@ def main():
     st.write("Topic modeling sur les données selectionnées")
     
     if st.button("prêt pour le topic modeling"):
-        st.write(sentiments)
+        # st.write(sentiments)
         try :
             data = df[df["sentiment"].isin(sentiments)]
             st.write(f"Données pour le topic modeling 1: {len(df)}")
@@ -169,7 +185,7 @@ def main():
             st.error(f"Erreur lors de la sélection des sentiments : {e}")
 
         try:
-            tp = TopicModeling(data)
+            tp = TopicModeling(data, videoid=videoid, sentiments=sentiments)
             # st.write(f"Données pour le topic modeling : {len(data)}")
             # st.write(len(tp.corpus))
             # st.write(len(tp.dictionary))
@@ -177,7 +193,7 @@ def main():
             
             with st.spinner("Wait for it...", show_time=True):
                 result = tp.main_topic_modeling()
-            st.write(f"Résultats du topic modeling : {len(result)}")
+            st.success(f"Résultats du topic modeling : {len(result)} commentaires analysés")
 
             # graphique de distribution des commentaires par topic
             st.write("Distribution des commentaires par topic :")

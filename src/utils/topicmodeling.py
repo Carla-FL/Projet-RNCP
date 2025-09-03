@@ -1,4 +1,5 @@
-import gensim
+import sys
+sys.path.append("/Users/carla/Desktop/GitHub/Projet-RNCP")
 import pandas as pd
 from gensim import corpora
 from gensim import models
@@ -11,10 +12,11 @@ from gensim.models import CoherenceModel
 import warnings
 warnings.filterwarnings("ignore")
 from gensim.models import LdaModel, CoherenceModel
+from src.utils.redis_cahce import TopicModelingCache
 
 
 class TopicModeling:
-    def __init__(self, df):
+    def __init__(self, df, videoid=None, sentiments=None):
         """
         Initialisation de la classe TopicModeling.
         
@@ -22,12 +24,16 @@ class TopicModeling:
             df: DataFrame contenant les documents à analyser.
         """
         self.df = df
+        self.videoid = videoid
+        self.sentiments = sentiments or []
+        self.cache = TopicModelingCache()
         self.corpus = [doc for doc  in df['tokens_clean_lem']]
         self.dictionary = corpora.Dictionary(self.corpus)
         self.dictionary.filter_extremes(no_below=20, no_above=0.5)
         self.corpus_vect = [self.dictionary.doc2bow(doc) for doc in self.corpus]
         self.optimal_model = None
         self.optimal_num_topics = None
+        
 
     # def get_corpus_vect(self):
     #     return [self.dictionary.doc2bow(doc) for doc in self.corpus]
@@ -84,7 +90,7 @@ class TopicModeling:
     def get_best_model_topic(self):
         # Paramètres
         start = 3
-        limit = 20
+        limit = 10
         step = 1
 
 
@@ -123,6 +129,12 @@ class TopicModeling:
             optimal_model: Le modèle LDA optimal.
             optimal_num_topics: Le nombre optimal de topics.
         """
+        if self.videoid and self.sentiments:
+            cached_results = self.cache.get_cached_results(self.videoid, self.sentiments, self.df)
+            if cached_results is not None:
+                return cached_results
+            
+
         optimal_model, optimal_num_topics = self.get_best_model_topic()
         # Appliquer le modèle optimal aux documents
         all_topics = []
@@ -142,12 +154,16 @@ class TopicModeling:
             all_key_words.append(key_words)
 
         if len(all_topics) == len(dominant_topics)== len(topic_probs)==len(all_key_words)==len(self.df):
+            result_df = self.df.copy()
+            result_df["topic_id"] = dominant_topics
+            result_df["topic_prob"] = topic_probs
+            result_df["topic_keywords"] = all_key_words
 
-            self.df["topic_id"] = dominant_topics
-            self.df["topic_prob"] = topic_probs
-            self.df["topic_keywords"] = all_key_words
+            # sauvegarde en cache
+            if self.videoid and self.sentiments:
+                self.cache.cache_results(self.videoid, self.sentiments, self.df, result_df)
 
-            return self.df
+            return result_df
         
         else:
             raise ValueError("Les longueurs des listes ne correspondent pas. Vérifiez les données d'entrée.")

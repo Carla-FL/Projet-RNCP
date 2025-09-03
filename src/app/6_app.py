@@ -8,6 +8,23 @@ st.set_page_config(layout="wide",
 
 st.logo("/Users/carla/Desktop/GitHub/Projet-RNCP/ressources/incon.png", size="large",)
 
+# Initialisation des variables de session globales
+def init_global_session_state():
+    """Initialise les variables globales de session"""
+    if 'current_analysis' not in st.session_state:
+        st.session_state.current_analysis = None
+    if 'url_input' not in st.session_state:
+        st.session_state.url_input = ""
+    if 'videoid' not in st.session_state:
+        st.session_state.videoid = None
+    if 'data_base_name' not in st.session_state:
+        st.session_state.data_base_name = None
+    if 'client_mdb' not in st.session_state:
+        st.session_state.client_mdb = None
+
+# Appeler l'initialisation
+init_global_session_state()
+
 
 pages = {
     " 1 - Accueil": page1.main,
@@ -18,6 +35,18 @@ st.sidebar.title('Navigation')
 p = st.sidebar.radio('Aller à  ', list(pages.keys()))
 
 st.sidebar.markdown("-------------------")
+
+
+# Bouton pour effacer toutes les données
+if st.sidebar.button("🗑️ Effacer toutes les données"):
+    # Effacer toutes les variables de session liées à l'analyse
+    keys_to_clear = ['analysis_done', 'video_data', 'current_analysis', 'url_input', 
+                    'videoid', 'data_base_name', 'client_mdb']
+    for key in keys_to_clear:
+        if key in st.session_state:
+            del st.session_state[key]
+    st.sidebar.success("Données effacées!")
+    st.rerun()
 
 pages[p]()
 
