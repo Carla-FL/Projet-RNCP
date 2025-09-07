@@ -1,11 +1,42 @@
+# Dockerfile_synchronisation
 FROM python:3.10-slim
 
+# Définir le répertoire de travail
 WORKDIR /app
 
+# Installer les dépendances système
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copier les fichiers requirements
 COPY requirements.txt .
 
-RUN pip3 install -r requirements.txt
+# Installer les dépendances Python
+RUN pip install --no-cache-dir -r requirements.txt
 
+# Télécharger le modèle spaCy français
+RUN python -m spacy download fr_core_news_sm
+
+# Copier le code source
 COPY . .
 
-CMD [ "python", "src/utils/synchronisation.py" ]
+# Variable d'environnement pour Prefect
+ENV PREFECT_API_URL=http://prefect:4200/api
+ENV PREFECT_LOGGING_LEVEL=INFO
+
+# Attendre que Prefect soit prêt puis démarrer la synchronisation
+CMD ["python", "-c", "import time; time.sleep(30); exec(open('synchronisation.py').read())"]
+# FROM python:3.10
+
+# WORKDIR /app
+
+# COPY requirements.txt .
+
+# RUN pip3 install -r requirements.txt
+
+# COPY . .
+
+# CMD [ "python", "src/utils/synchronisation.py" ]

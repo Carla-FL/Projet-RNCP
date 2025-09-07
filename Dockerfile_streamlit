@@ -1,11 +1,60 @@
+# Dockerfile_streamlit
 FROM python:3.10-slim
 
+# Définir le répertoire de travail
 WORKDIR /app
 
+# Installer les dépendances système nécessaires
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copier les fichiers requirements
 COPY requirements.txt .
 
-RUN pip3 install -r requirements.txt
+# Installer les dépendances Python
+RUN pip install --no-cache-dir -r requirements.txt
 
+# Télécharger le modèle spaCy français
+RUN python -m spacy download fr_core_news_sm
+
+# Copier le code source
 COPY . .
 
-CMD [ "python", "streamlit", "run", "src/app/6_app.py" ]
+# Créer le répertoire pour les ressources
+RUN mkdir -p /app/ressources
+
+# Exposer le port Streamlit
+EXPOSE 8501
+
+# Variable d'environnement pour Streamlit
+ENV STREAMLIT_SERVER_PORT=8501
+ENV STREAMLIT_SERVER_ADDRESS=0.0.0.0
+ENV STREAMLIT_SERVER_HEADLESS=true
+ENV STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+
+# Commande de démarrage
+CMD ["streamlit", "run", "6_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# FROM python:3.10
+
+# WORKDIR /app
+
+
+# # Créer un répertoire temp pour Streamlit
+# RUN mkdir -p /tmp/streamlit && chmod 777 /tmp/streamlit
+
+# COPY requirements.txt .
+
+# RUN pip3 install -r requirements.txt
+
+# COPY . .
+
+# # Variables d'environnement pour Streamlit
+# ENV STREAMLIT_SERVER_HEADLESS=true
+# ENV STREAMLIT_SERVER_FILE_WATCHER_TYPE=none
+# ENV STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+# ENV TMPDIR=/tmp/streamlit
+
+# CMD ["python", "-m", "streamlit", "run", "src/app/6_app.py", "--server.address", "0.0.0.0", "--server.port", "8501"]

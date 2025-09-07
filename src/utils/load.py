@@ -32,8 +32,7 @@ class Load:
         Fonction pour récupérer les informations d'authentification depuis un fichier de configuration.
         """
         try:
-            #with open('/Users/carla/Desktop/GitHub/Projet-RNCP/auth.json', 'r') as file:
-                #lines = json.load(file)
+    
             username =  self.username  # Encodage du nom d'utilisateur lines['username'] #
             password =  self.password  # Encodage du mot de passe lines['password'] #
             host =  self.host  # Adresse du serveur MongoDB lines['host'] #

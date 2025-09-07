@@ -1,5 +1,8 @@
 import sys
 sys.path.append("/Users/carla/Desktop/GitHub/Projet-RNCP")
+# import sys
+# import os
+# sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import streamlit as st
 from pages import page1, page2
 
@@ -7,6 +10,9 @@ st.set_page_config(layout="wide",
                 page_title="YOU REVIEW ANALYSER")
 
 st.logo("/Users/carla/Desktop/GitHub/Projet-RNCP/ressources/incon.png", size="large",)
+# logo_path = os.path.join(os.getcwd(), "ressources", "icon.png")  # correction du nom
+# if os.path.exists(logo_path):
+#     st.logo(logo_path, size="large")
 
 # Initialisation des variables de session globales
 def init_global_session_state():

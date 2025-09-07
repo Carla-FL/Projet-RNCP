@@ -1,0 +1,231 @@
+# CONDITIONS GÉNÉRALES D'UTILISATION
+## Application d'Analyse Automatisée des Commentaires YouTube
+
+**Date de dernière mise à jour :** [Date à compléter]
+
+---
+
+## ARTICLE 1 - DÉFINITIONS
+
+Les termes suivants, qu'ils soient utilisés au singulier ou au pluriel, ont la signification suivante :
+
+- **Application** : L'application web d'analyse automatisée des commentaires YouTube développée avec Streamlit
+- **Fournisseur** : [Nom de votre société de consulting] (ci-après "la Société")
+- **Utilisateur** : Toute personne physique ou morale utilisant l'Application
+- **Services** : L'ensemble des fonctionnalités offertes par l'Application incluant l'analyse de sentiment et le topic modeling
+- **Données** : Les commentaires YouTube et métadonnées associées collectées via l'API YouTube
+- **CGU** : Les présentes Conditions Générales d'Utilisation
+
+## ARTICLE 2 - OBJET ET ACCEPTATION
+
+### 2.1 Objet
+Les présentes CGU régissent l'accès et l'utilisation de l'Application d'analyse automatisée des commentaires YouTube fournie gratuitement par la Société dans le cadre d'un projet de développement d'outil pour client.
+
+### 2.2 Acceptation
+L'utilisation de l'Application emporte acceptation pleine et entière des présentes CGU. Si vous n'acceptez pas ces conditions, vous devez cesser immédiatement l'utilisation de l'Application.
+
+### 2.3 Modifications
+La Société se réserve le droit de modifier les présentes CGU à tout moment. Les modifications prennent effet dès leur publication. L'utilisation continue de l'Application après modification vaut acceptation des nouvelles conditions.
+
+## ARTICLE 3 - DESCRIPTION DU SERVICE
+
+### 3.1 Fonctionnalités principales
+L'Application propose les services suivants :
+- Collecte automatisée des commentaires publics YouTube via l'API YouTube Data API v3
+- Analyse de sentiment des commentaires en langue française
+- Modélisation thématique (topic modeling) pour identifier les sujets principaux
+- Visualisation des résultats d'analyse sous forme de graphiques et statistiques
+- Stockage temporaire des données en cache MongoDB
+
+### 3.2 Nature du service
+- Service fourni gratuitement à titre expérimental
+- Outil d'analyse macro destiné à l'étude de tendances générales
+- Analyse limitée au contenu francophone
+- Données conservées uniquement en cache temporaire
+
+### 3.3 Finalité d'usage
+L'Application est conçue pour l'analyse de données collectives et de tendances générales. Elle ne doit EN AUCUN CAS être utilisée pour :
+- Identifier ou cibler des personnes spécifiques
+- Analyser ou profiler des groupes de personnes identifiables
+- Discriminer des minorités ou communautés particulières
+- Collecter des informations personnelles à des fins de surveillance
+
+## ARTICLE 4 - CONDITIONS D'ACCÈS ET D'UTILISATION
+
+### 4.1 Prérequis techniques
+- Connexion internet stable
+- Navigateur web moderne et compatible
+- JavaScript activé
+
+### 4.2 Modalités d'utilisation
+- L'Utilisateur fournit une URL de vidéo YouTube publique et francophone
+- L'Application collecte automatiquement les commentaires publics
+- Les analyses sont générées en temps réel
+- Les résultats sont présentés de manière anonymisée et agrégée
+
+### 4.3 Limitations
+- Service limité aux quotas de l'API YouTube (selon les restrictions Google)
+- Analyse uniquement des commentaires publics
+- Traitement limité au contenu en langue française
+- Pas de garantie de disponibilité 24h/24
+
+## ARTICLE 5 - OBLIGATIONS DE L'UTILISATEUR
+
+L'Utilisateur s'engage à :
+
+### 5.1 Usage conforme
+- Utiliser l'Application uniquement pour des analyses de tendances générales
+- Respecter le caractère expérimental et éducatif de l'outil
+- Ne pas tenter de contourner les mesures de sécurité
+
+### 5.2 Usage interdit
+L'Utilisateur s'interdit formellement de :
+- Utiliser l'Application pour identifier ou cibler des personnes spécifiques
+- Analyser des contenus dans un but de discrimination
+- Extraire des données à des fins commerciales non autorisées
+- Surcharger le système par des requêtes excessives
+- Utiliser l'outil à des fins illégales ou malveillantes
+
+### 5.3 Responsabilité d'usage
+L'Utilisateur reconnaît que l'Application fournit des analyses automatisées qui :
+- Peuvent contenir des erreurs d'interprétation
+- Ne doivent pas être utilisées comme seule base de décision
+- Nécessitent une validation humaine avant utilisation
+- Sont destinées à un usage informatif uniquement
+
+## ARTICLE 6 - TRAITEMENT DES DONNÉES
+
+### 6.1 Données collectées
+Les données traitées comprennent uniquement :
+- Commentaires publics des vidéos YouTube
+- Métadonnées publiques associées (date, nombre de likes)
+- URL des vidéos analysées
+- Résultats d'analyses agrégés et anonymisés
+
+### 6.2 Base légale et conformité
+Le traitement se fonde sur :
+- L'intérêt légitime pour la recherche et l'innovation technologique
+- Le consentement de l'Utilisateur par l'usage du service
+- Le respect du RGPD et de la réglementation française
+- Les conditions d'utilisation de l'API YouTube
+
+### 6.3 Conservation et stockage
+- Stockage temporaire en cache MongoDB uniquement
+- Pas de conservation permanente des données personnelles
+- Données techniques effacées automatiquement après utilisation
+- Aucune transmission à des tiers sans consentement
+
+### 6.4 Droits des personnes
+Les personnes concernées par les commentaires analysés peuvent exercer leurs droits RGPD en contactant directement YouTube, propriétaire des données originales.
+
+## ARTICLE 7 - PROPRIÉTÉ INTELLECTUELLE
+
+### 7.1 Propriété de l'Application
+- L'Application, son code source et sa documentation restent propriété exclusive de la Société
+- Aucune licence d'utilisation n'est accordée au-delà du service proposé
+
+### 7.2 Données analysées
+- Les commentaires YouTube restent propriété de leurs auteurs respectifs
+- Les résultats d'analyse appartiennent à l'Utilisateur
+- La Société se réserve le droit d'utiliser les statistiques anonymisées à des fins d'amélioration
+
+## ARTICLE 8 - RESPONSABILITÉS ET GARANTIES
+
+### 8.1 Responsabilité de la Société
+La Société s'efforce d'assurer la qualité du service mais ne peut garantir :
+- L'exactitude absolue des analyses automatisées
+- La disponibilité permanente du service
+- L'absence d'interruptions techniques
+- La exhaustivité des données collectées
+
+### 8.2 Limitation de responsabilité
+La Société ne saurait être tenue responsable :
+- Des décisions prises sur la base des analyses fournies
+- Des dommages résultant d'un usage inapproprié de l'outil
+- Des interruptions dues aux limitations de l'API YouTube
+- Des erreurs d'interprétation des algorithmes d'analyse
+
+### 8.3 Service expérimental
+L'Utilisateur reconnaît expressément que :
+- L'Application est fournie dans le cadre d'un projet éducatif
+- Le service peut être interrompu ou modifié sans préavis
+- Aucune garantie commerciale n'est accordée
+- L'usage se fait aux risques de l'Utilisateur
+
+## ARTICLE 9 - DISPONIBILITÉ ET INTERRUPTIONS
+
+### 9.1 Disponibilité
+- Service fourni "en l'état" sans garantie de disponibilité
+- Maintenance et mises à jour possibles sans préavis
+- Dépendance aux services tiers (API YouTube, MongoDB)
+
+### 9.2 Interruptions
+La Société se réserve le droit d'interrompre le service :
+- Pour maintenance technique
+- En cas d'usage abusif ou non conforme
+- Pour modification ou amélioration de l'outil
+- En cas de dépassement des quotas API
+
+## ARTICLE 10 - DISPOSITIONS FINANCIÈRES
+
+### 10.1 Gratuité du service
+L'Application est fournie gratuitement dans le cadre d'un projet de développement éducatif. Aucun frais n'est facturé à l'Utilisateur.
+
+### 10.2 Évolution tarifaire
+La Société se réserve le droit de modifier la politique tarifaire moyennant un préavis de 30 jours.
+
+## ARTICLE 11 - CONTACT ET RÉCLAMATIONS
+
+Pour toute question relative aux présentes CGU ou à l'utilisation de l'Application :
+
+**Email :** [adresse email à compléter]  
+**Adresse :** [adresse postale de la société à compléter]
+
+**Délai de traitement :** Les demandes sont traitées dans un délai de 7 jours ouvrables.
+
+## ARTICLE 12 - RÉSILIATION
+
+### 12.1 Résiliation par l'Utilisateur
+L'Utilisateur peut cesser l'utilisation à tout moment sans formalité.
+
+### 12.2 Résiliation par la Société
+La Société peut suspendre l'accès en cas de violation des présentes CGU ou d'usage abusif.
+
+### 12.3 Effets de la résiliation
+En cas de fin du service, toutes les données en cache sont automatiquement supprimées.
+
+## ARTICLE 13 - DROIT APPLICABLE ET JURIDICTION
+
+### 13.1 Droit applicable
+Les présentes CGU sont régies par le droit français.
+
+### 13.2 Résolution des litiges
+En cas de litige, les parties s'efforceront de trouver une solution amiable. À défaut, les tribunaux français seront compétents.
+
+### 13.3 Médiation
+L'Utilisateur consommateur peut recourir à la médiation via la plateforme européenne de règlement en ligne des litiges : https://ec.europa.eu/consumers/odr/
+
+## ARTICLE 14 - DISPOSITIONS DIVERSES
+
+### 14.1 Nullité partielle
+Si une clause des présentes CGU était déclarée nulle, les autres dispositions resteraient applicables.
+
+### 14.2 Intégralité
+Les présentes CGU constituent l'intégralité de l'accord entre les parties concernant l'utilisation de l'Application.
+
+### 14.3 Non-renonciation
+Le fait pour la Société de ne pas se prévaloir d'une clause ne vaut pas renonciation à celle-ci.
+
+---
+
+**MENTIONS IMPORTANTES :**
+
+⚠️ **ATTENTION - USAGE ÉTHIQUE OBLIGATOIRE**
+Cette application est destinée exclusivement à l'analyse de tendances générales. Toute utilisation visant à identifier, profiler ou discriminer des personnes ou groupes spécifiques est strictement interdite et contraire aux principes éthiques de l'intelligence artificielle.
+
+⚠️ **LIMITATION DE FIABILITÉ**
+Les analyses produites par cette application sont générées automatiquement et peuvent contenir des erreurs. Elles ne doivent jamais constituer la seule base de décisions importantes et nécessitent toujours une validation humaine.
+
+---
+
+**Pour toute question sur ces conditions d'utilisation, contactez-nous à [email à compléter]**

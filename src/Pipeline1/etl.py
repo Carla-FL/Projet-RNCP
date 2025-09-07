@@ -1,5 +1,8 @@
+# import sys
+# sys.path.append("/Users/carla/Desktop/GitHub/Projet-RNCP")  # Ajoute le répertoire parent au chemin de recherche des modules
 import sys
-sys.path.append("/Users/carla/Desktop/GitHub/Projet-RNCP")  # Ajoute le répertoire parent au chemin de recherche des modules
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.utils.extraction import Extraction
 from src.utils.transformation import main_transformation
 from src.utils.load import Load

@@ -6,6 +6,7 @@ import streamlit as st
 from datetime import datetime
 from typing import Dict, Any, Optional
 import pandas as pd
+import os
 
 @st.cache_resource
 def get_redis_client():
@@ -18,6 +19,14 @@ def get_redis_client():
             db=0, 
             decode_responses=False
         )
+    # try:
+    #     # Pour Docker
+    #     client = redis.Redis(
+    #         host=os.getenv('REDIS_HOST', 'redis'), 
+    #         port=int(os.getenv('REDIS_PORT', 6379)), 
+    #         db=0, 
+    #         decode_responses=False
+    #     )
         
         # Pour production avec Redis Cloud (gratuit)
         # client = redis.from_url("redis://default:password@host:port")
