@@ -30,6 +30,7 @@ plotly==6.3.0
 wordcloud==1.9.4
 pyinstaller>=5.4
 redis==6.4.0
+datasets
 # bertopic
 # mistral_inference
 # xformers
