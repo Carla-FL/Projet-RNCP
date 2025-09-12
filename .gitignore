@@ -9,6 +9,16 @@ BLOC3.docx
 token_hf.txt
 auth.json
 stockage/
+french_tweets.csv
+partial_translation_1755024318.csv
+test.csv
+youtube_comments_cleaned.csv
+recovered_translations_20250907_2042.csv
+translated_dataset_20250905_2324.csv
+translated_dataset_20250906_1129.csv
+recovered_translations_20250907_1244.csv
+recovered_translations_20250907_1335.csv
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
