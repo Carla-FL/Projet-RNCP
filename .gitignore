@@ -19,7 +19,8 @@ translated_dataset_20250906_1129.csv
 recovered_translations_20250907_1244.csv
 recovered_translations_20250907_1335.csv
 notebooks/mon_modele_chunks/
-
+ressources/sentimentnmodel.pkl
+src/utils/bestmodel.pkl
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
