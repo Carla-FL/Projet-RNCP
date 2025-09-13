@@ -81,11 +81,12 @@ def sentiment_kpi(client, db, videoid):
         "Valeur": sentiment_values
     })
 
-    color_map = {'positive': '#28a745','negative': '#dc3545', 'neutral': '#ffc107','mixed': '#6c757d', 1:'#28a745', 2:'#dc3545'}
-    colors = [color_map.get(sentiment, '#6c757d') for sentiment in sentiment_labels]
+    # color_map = {'positive': '#28a745','negative': '#dc3545', 'neutral': '#ffc107','mixed': '#6c757d'}
+    color_map = {'positive': 'green','negative': 'red', 'neutral': 'grey','mixed': 'grey'}
+    # colors = [color_map.get(sentiment, 'grey') for sentiment in sentiment_labels]
     # st.write(color_map)
 
-    fig = px.pie(df, values="Valeur", names="Sentiment", title="Répartition des sentiments", color_discrete_sequence=colors)
+    fig = px.pie(df, values="Valeur", names="Sentiment", title="Répartition des sentiments", color="Sentiment", color_discrete_map=color_map)
 
     st.plotly_chart(fig, use_container_width=True)
 
@@ -111,18 +112,18 @@ def exemple_data (client,db,  videoid, sentiments:list=None):
     df = pd.DataFrame(list(collection.find({})))
     # selectionner les coolonnes commentaire et sentiment
     df = df[['comment', 'sentiment']]
-    st.write(f"Nombre de commentaires : {len(df)}")
+    # st.write(f"Nombre de commentaires : {len(df)}")
 
     for sent in sentiments:
-        if sent == "Positif":
+        if sent == "positive":
             dfpos = df[df["sentiment"] == 2].iloc[:3]
             st.write(f"Nombre de commentaires positifs : {len(dfpos)}")
             st.dataframe(dfpos, use_container_width=True)
-        if sent == "Negatif":
+        if sent == "negative":
             dfneg = df[df["sentiment"] == 0].iloc[:3]
             st.write(f"Nombre de commentaires négatifs : {len(dfneg)}")
             st.dataframe(dfneg, use_container_width=True)
-        if sent == "Neutre":
+        if sent == "neutral":
             dfnet = df[df["sentiment"] == 1].iloc[:3]
             st.write(f"Nombre de commentaires neutres : {len(dfnet)}")
             st.dataframe(dfnet, use_container_width=True)
@@ -138,18 +139,18 @@ def main():
     client = Load().data_base_connexion()
 
     redis_client = get_redis_client()
-    if redis_client:
-        with st.expander("Statut du Cache Redis"):
-            try:
-                info = redis_client.info('memory')
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.metric("Mémoire Redis", f"{info['used_memory'] / (1024*1024):.1f} MB")
-                with col2:
-                    keys = redis_client.keys("topic_model:*")
-                    st.metric("Modèles en cache", len(keys))
-            except:
-                st.info("Informations Redis non disponibles")
+    # if redis_client:
+    #     with st.expander("Statut du Cache Redis"):
+    #         try:
+    #             info = redis_client.info('memory')
+    #             col1, col2 = st.columns(2)
+    #             with col1:
+    #                 st.metric("Mémoire Redis", f"{info['used_memory'] / (1024*1024):.1f} MB")
+    #             with col2:
+    #                 keys = redis_client.keys("topic_model:*")
+    #                 st.metric("Modèles en cache", len(keys))
+    #         except:
+    #             st.info("Informations Redis non disponibles")
 
     sentiment_kpi(client, db, videoid)
 
