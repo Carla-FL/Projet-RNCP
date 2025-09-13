@@ -129,7 +129,13 @@ def get_tfidf_vector(df, text='comment_clean_lem'):
 def get_sentiment_model(path=None): # '/Users/carla/Desktop/GitHub/Projet-RNCP/src/utils/bestmodel.pkl'
     # with open(path, 'rb') as fichier_modele:
     #     model = pickle.load(fichier_modele)
-    model = pipeline("sentiment-analysis", model="cardiffnlp/twitter-xlm-roberta-base-sentiment-multilingual", truncation=True,max_length=512)
+    model = pipeline(
+    "sentiment-analysis", 
+    model="Carlito-25/sentiment-model-finetuned", 
+    device=-1, 
+    truncation=True, 
+    max_length=514
+)
     return model
 
 @task(name='sentiment_analyse', description="Analyse des sentiments des commentaires")
