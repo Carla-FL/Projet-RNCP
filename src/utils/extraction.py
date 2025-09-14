@@ -125,7 +125,6 @@ class Extraction :
                     "titre" : video_title,
                     "channelId": comment_info.get("channelId"),
                     "videoId": comment_info.get("videoId"),	
-                    "author": comment_info.get("authorDisplayName"),
                     "publishedAt": comment_info.get("publishedAt"),
                     "comment": comment_info.get("textOriginal"),
                     "likeCount": comment_info.get("likeCount"),

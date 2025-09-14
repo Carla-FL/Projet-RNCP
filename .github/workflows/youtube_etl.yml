@@ -1,0 +1,267 @@
+# .github/workflows/youtube-etl.yml
+name: YouTube ETL Pipeline
+
+on:
+  # Exécution automatique toutes les heures
+  schedule:
+    - cron: '0 * * * *'  # Toutes les heures
+  
+  # Déclenchement manuel depuis l'interface GitHub
+  workflow_dispatch:
+    inputs:
+      force_update:
+        description: 'Forcer la mise à jour complète'
+        type: boolean
+        default: false
+      target_channel:
+        description: 'Channel ID spécifique (optionnel)'
+        type: string
+        required: false
+
+env:
+  PYTHON_VERSION: '3.10'
+
+jobs:
+  # Job principal d'ETL
+  etl-update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30  # Timeout pour éviter les jobs qui traînent
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Download spaCy models
+      run: |
+        python -m spacy download fr_core_news_sm
+        
+    - name: Create necessary directories
+      run: |
+        mkdir -p logs
+        mkdir -p .model_cache
+        
+    - name: Run ETL Pipeline
+      env:
+        # Secrets MongoDB
+        CONNECTING_STRING_ATLAS: ${{ secrets.CONNECTING_STRING_ATLAS }}
+        MONGODB_DATABASE: ${{ secrets.MONGODB_DATABASE }}
+        
+        # Secrets API
+        DEVELOPER_KEY: ${{ secrets.DEVELOPER_KEY }}
+        HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        
+        # Configuration modèles
+        MODEL_PRIORITY: "finetuned,original,logistic"
+        
+        # Configuration locale (pour compatibilité)
+        MONGO_USERNAME: ${{ secrets.MONGO_USERNAME }}
+        MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
+        MONGO_HOST: "localhost"
+        MONGO_PORT: "27017"
+        MONGO_AUTH_SOURCE: "admin"
+        
+        # Paramètres du workflow
+        FORCE_UPDATE: ${{ github.event.inputs.force_update || 'false' }}
+        TARGET_CHANNEL: ${{ github.event.inputs.target_channel || '' }}
+        
+      run: |
+        echo "Démarrage du pipeline ETL YouTube"
+        echo "Timestamp: $(date)"
+        echo "Event: ${{ github.event_name }}"
+        echo "Force update: ${{ env.FORCE_UPDATE }}"
+        
+        # Exécuter le script de synchronisation principal
+        python maj.py
+        
+    - name: Upload logs
+      if: always()  # Toujours uploader les logs même en cas d'erreur
+      uses: actions/upload-artifact@v3
+      with:
+        name: etl-logs-${{ github.run_number }}
+        path: |
+          logs/
+          *.log
+        retention-days: 7
+        
+    - name: Generate summary report
+      if: always()
+      run: |
+        echo "## ETL Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- **Timestamp**: $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f "logs/summary.json" ]; then
+          echo "- **Records processed**: $(jq -r '.records_processed // "N/A"' logs/summary.json)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Videos updated**: $(jq -r '.videos_updated // "N/A"' logs/summary.json)" >> $GITHUB_STEP_SUMMARY
+        fi
+
+  # Job de maintenance hebdomadaire
+  weekly-maintenance:
+    runs-on: ubuntu-latest
+    # Ne s'exécute que le dimanche à 2h
+    if: github.event_name == 'schedule' && github.event.schedule == '0 2 * * 0'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Database maintenance
+      env:
+        CONNECTING_STRING_ATLAS: ${{ secrets.CONNECTING_STRING_ATLAS }}
+        MONGODB_DATABASE: ${{ secrets.MONGODB_DATABASE }}
+      run: |
+        echo "Maintenance hebdomadaire de la base de données"
+        python -c "
+        import os
+        from pymongo import MongoClient
+        from datetime import datetime, timedelta
+        
+        # Connexion à MongoDB
+        client = MongoClient(os.getenv('CONNECTING_STRING_ATLAS'))
+        db = client[os.getenv('MONGODB_DATABASE', 'youtube-analysis')]
+        
+        # Statistiques
+        collections = db.list_collection_names()
+        total_docs = sum(db[col].count_documents({}) for col in collections)
+        
+        print(f'Collections: {len(collections)}')
+        print(f'Total documents: {total_docs}')
+        
+        # Nettoyage optionnel des données anciennes (plus de 90 jours)
+        cutoff_date = datetime.now() - timedelta(days=90)
+        
+        for collection_name in collections:
+            collection = db[collection_name]
+            # Supprimer les documents trop anciens si le champ extractedAt existe
+            try:
+                deleted = collection.delete_many({
+                    'extractedAt': {'$lt': cutoff_date.isoformat()}
+                })
+                if deleted.deleted_count > 0:
+                    print(f'Supprimé {deleted.deleted_count} anciens documents de {collection_name}')
+            except:
+                pass  # Ignorer si le champ n'existe pas
+        
+        client.close()
+        print('Maintenance terminée')
+        "
+        
+    - name: Generate weekly report
+      env:
+        CONNECTING_STRING_ATLAS: ${{ secrets.CONNECTING_STRING_ATLAS }}
+        MONGODB_DATABASE: ${{ secrets.MONGODB_DATABASE }}
+      run: |
+        echo "# Rapport Hebdomadaire - $(date '+%Y-%m-%d')" > weekly_report.md
+        echo "" >> weekly_report.md
+        
+        python -c "
+        import os
+        from pymongo import MongoClient
+        from collections import Counter
+        import json
+        
+        client = MongoClient(os.getenv('CONNECTING_STRING_ATLAS'))
+        db = client[os.getenv('MONGODB_DATABASE', 'youtube-analysis')]
+        
+        collections = db.list_collection_names()
+        
+        print('## Statistiques Générales')
+        print(f'- **Nombre de collections**: {len(collections)}')
+        
+        total_comments = 0
+        sentiment_stats = Counter()
+        
+        for col in collections[:10]:  # Limite pour éviter les timeouts
+            collection = db[col]
+            count = collection.count_documents({})
+            total_comments += count
+            
+            # Statistiques de sentiment si disponibles
+            try:
+                sentiments = collection.distinct('sentiment')
+                for sent in sentiments:
+                    if sent:
+                        sentiment_stats[sent] += collection.count_documents({'sentiment': sent})
+            except:
+                pass
+        
+        print(f'- **Total commentaires**: {total_comments}')
+        print('')
+        
+        if sentiment_stats:
+            print('## Analyse de Sentiment')
+            for sentiment, count in sentiment_stats.most_common():
+                percentage = (count / sum(sentiment_stats.values())) * 100
+                print(f'- **{sentiment}**: {count} ({percentage:.1f}%)')
+        
+        client.close()
+        " >> weekly_report.md
+        
+    - name: Upload weekly report
+      uses: actions/upload-artifact@v3
+      with:
+        name: weekly-report-${{ github.run_number }}
+        path: weekly_report.md
+        retention-days: 30
+
+  # Job de notification en cas d'erreur
+  notify-on-failure:
+    runs-on: ubuntu-latest
+    needs: [etl-update]
+    if: failure()
+    
+    steps:
+    - name: Create issue on failure
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const title = `ETL Pipeline Failed - ${new Date().toISOString().split('T')[0]}`;
+          const body = `
+          Le pipeline ETL a échoué lors de l'exécution automatique.
+          
+          **Détails:**
+          - Run ID: ${{ github.run_id }}
+          - Trigger: ${{ github.event_name }}
+          - Timestamp: ${new Date().toISOString()}
+          
+          **Actions à prendre:**
+          1. Vérifier les logs dans l'onglet Actions
+          2. Contrôler les connexions aux services externes
+          3. Vérifier les quotas API YouTube
+          
+          **Liens utiles:**
+          - [Run Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          - [MongoDB Atlas](https://cloud.mongodb.com)
+          - [Streamlit App](https://share.streamlit.io)
+          `;
+          
+          github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: title,
+            body: body,
+            labels: ['bug', 'etl-failure']
+          });
