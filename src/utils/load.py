@@ -1,4 +1,5 @@
-
+import sys
+sys.path.append("/Users/carla/Desktop/GitHub/Projet-RNCP")
 """ ________________________________________________________________   Library   ________________________________________________________________"""
 from pymongo import MongoClient
 import json
@@ -7,11 +8,24 @@ import os
 from dotenv import load_dotenv
 from prefect import flow, task
 from prefect import get_run_logger
-from pymongo import UpdateOne, DeleteMany, InsertOne
+from pymongo import UpdateOne, DeleteMany, InsertOne, MongoClient
 # from .transformation import main_transformation
 # from .extraction import Extraction
-load_dotenv()
+
 """ ________________________________________________________________  Fonctions  ________________________________________________________________"""
+try:
+    from src.app.streamlit_config import get_database_connections
+except ImportError:
+    # Fallback si streamlit_config n'est pas disponible
+    def get_database_connections():
+        return {
+            "mongodb": {
+                "connection_string": os.getenv("MONGODB_CONNECTION_STRING"),
+                "database": os.getenv("MONGODB_DATABASE", "youtube-analysis")
+            }
+        }
+load_dotenv()
+
 
 class Load:
     def __init__(self, maj=False):
@@ -19,47 +33,69 @@ class Load:
         Initialisation de la classe Load.
         """
         self.maj = maj  # Indique si c'est une mise à jour ou un chargement initial
-        self.username = str(os.getenv('MONGO_USERNAME'))
-        self.password = str(os.getenv('MONGO_PASSWORD'))
-        self.host = str(os.getenv('MONGO_HOST'))
-        self.port = str(os.getenv('MONGO_PORT'))
-        self.authSource = str(os.getenv('MONGO_AUTH_SOURCE'))
+        # self.username = str(os.getenv('MONGO_USERNAME'))
+        # self.password = str(os.getenv('MONGO_PASSWORD'))
+        # self.host = str(os.getenv('MONGO_HOST'))
+        # self.port = str(os.getenv('MONGO_PORT'))
+        # self.authSource = str(os.getenv('MONGO_AUTH_SOURCE'))
         
 
-    @task(name='authentification_task', description="Tâche d'authentification pour la connexion à MongoDB")
-    def authentification(self):
-        """
-        Fonction pour récupérer les informations d'authentification depuis un fichier de configuration.
-        """
-        try:
+    # @task(name='authentification_task', description="Tâche d'authentification pour la connexion à MongoDB")
+    # def authentification(self):
+    #     """
+    #     Fonction pour récupérer les informations d'authentification depuis un fichier de configuration.
+    #     """
+    #     try:
     
-            username =  self.username  # Encodage du nom d'utilisateur lines['username'] #
-            password =  self.password  # Encodage du mot de passe lines['password'] #
-            host =  self.host  # Adresse du serveur MongoDB lines['host'] #
-            port = self.port  # Port du serveur MongoDB lines['port'] # 
-            authSource =  self.authSource  # Base de données d'authentification lines['authSource'] #
-            return username, password, host, port, authSource
-        except FileNotFoundError:
-            raise FileNotFoundError("Le fichier de configuration est introuvable.")
+    #         username =  self.username  # Encodage du nom d'utilisateur lines['username'] #
+    #         password =  self.password  # Encodage du mot de passe lines['password'] #
+    #         host =  self.host  # Adresse du serveur MongoDB lines['host'] #
+    #         port = self.port  # Port du serveur MongoDB lines['port'] # 
+    #         authSource =  self.authSource  # Base de données d'authentification lines['authSource'] #
+    #         return username, password, host, port, authSource
+    #     except FileNotFoundError:
+    #         raise FileNotFoundError("Le fichier de configuration est introuvable.")
 
     @task(name='data_base_connexion_task', description="Tâche de connexion à la base de données MongoDB", retries=3, retry_delay_seconds=5)
     def data_base_connexion(self):
         """
         Fonction pour se connecter à la base de données MongoDB.
         """
-
-        username, password, host, port, auth_db = self.authentification()
-        # Création de l'URI de connexion MongoDB
-        uri = f"mongodb://{username}:{password}@{host}:{port}/?authSource={auth_db}"
-        print(f"Connecting to MongoDB at {uri}")
-        client = MongoClient(uri)
-        # Vérification de la connexion
         try:
-            client.admin.command('ping')  # Ping pour vérifier la connexion
-            print("Connexion à MongoDB réussie.")
+            db_config = get_database_connections()
+            connection_string = db_config["mongodb"]["connection_string"]
+            
+            if not connection_string:
+                raise ValueError("MONGODB_CONNECTION_STRING non configuré")
+            
+            client = MongoClient(connection_string)
+            # Test de connexion
+            client.admin.command('ping')
+            print("Connexion MongoDB Atlas réussie")
             return client
+            
         except Exception as e:
-            raise RuntimeError(f"Erreur de connexion à MongoDB : {e}")
+            raise RuntimeError(f"Erreur connexion MongoDB : {e}")
+        # try :
+        #     db_config = get_database_connections()
+        #     mongo_client = MongoClient(db_config["mongodb"]["connection_string"])
+        #     return mongo_client
+        # except Exception as e:
+        #     raise RuntimeError(f"Erreur de connexion à MongoDB : {e}")
+
+
+        # username, password, host, port, auth_db = self.authentification()
+        # # Création de l'URI de connexion MongoDB
+        # uri = f"mongodb://{username}:{password}@{host}:{port}/?authSource={auth_db}"
+        # print(f"Connecting to MongoDB at {uri}")
+        # client = MongoClient(uri)
+        # Vérification de la connexion
+        # try:
+        #     client.admin.command('ping')  # Ping pour vérifier la connexion
+        #     print("Connexion à MongoDB réussie.")
+        #     return client
+        # except Exception as e:
+        #     raise RuntimeError(f"Erreur de connexion à MongoDB : {e}")
         
         
     def data_base_deconnexion(self, client):
@@ -125,40 +161,88 @@ class Load:
         
     @flow(name='load_data', description="Chargement des données dans MongoDB")
     def load(self, df, video_id:str, channel_id:str):
+        """
+    Charge les données d'un DataFrame dans MongoDB.
+    - Si self.maj == True : suppression et réinsertion (mise à jour).
+    - Sinon : insertion simple.
+    """
         logger = get_run_logger()
+        # client = self.data_base_connexion()
+        client = None
 
-        client = self.data_base_connexion()
-        # création de la base
-        db = client[channel_id] # idenentifiant de la chaine
-        # création de la table dans la base
-        collection = db[video_id] # indentifiant de la video
+        try:
+            client = self.data_base_connexion()
+            db_config = get_database_connections()
+            
+            # Utiliser une seule base pour Atlas
+            db_name = db_config["mongodb"]["database"]
+            # Préfixer la collection par le channel pour éviter les conflits
+            collection_name = f"{channel_id}_{video_id}"
+            
+            db = client[db_name]
+            collection = db[collection_name]
+            
+            comments_data = df.to_dict('records') if not df.empty else []
+            
+            if not comments_data:
+                logger.warning("Aucune donnée à charger")
+                return
+            
+            if self.maj:
+                logger.info("Mise à jour des données...")
+                collection.delete_many({})
+                result = collection.insert_many(comments_data)
+                logger.info(f"{len(result.inserted_ids)} documents mis à jour")
+            else:
+                logger.info("Insertion des données...")
+                result = collection.insert_many(comments_data)
+                logger.info(f"{len(result.inserted_ids)} documents insérés")
+                
+        except Exception as e:
+            logger.error(f"Erreur chargement : {e}")
+            raise e
+        finally:
+            if client:
+                self.data_base_deconnexion(client)
 
-        if self.maj == True:
-            # # logger.info("Mise à jour des données dans MongoDB...")
-            comments_data = df.to_dict('records')
-            # operations = [UpdateOne(
-            #         {"id": comment["id"]},
-            #         {"$set": comment},
-            #         upsert=True)
-            #     for comment in comments_data
-            # ]
+        # try :
+        #     # création de la base
+        #     db = client[channel_id] # idenentifiant de la chaine
+        #     # création de la table dans la base
+        #     collection = db[video_id] # indentifiant de la video
+        #     comments_data = df.to_dict('records')
 
-            # if operations:
-            #     collection.bulk_write(operations)
-            # Supprime tous les documents existants
-            db[video_id].delete_many({})
-            # Insère tous les nouveaux documents
-            db[video_id].insert_many(comments_data)
+        #     if self.maj == True:
+        #         logger.info("Mise à jour des données dans MongoDB...")
+                
+        #         # operations = [UpdateOne(
+        #         #         {"id": comment["id"]},
+        #         #         {"$set": comment},
+        #         #         upsert=True)
+        #         #     for comment in comments_data
+        #         # ]
+
+        #         # if operations:
+        #         #     collection.bulk_write(operations)
+        #         # Supprime tous les documents existants
+        #         if comments_data:
+        #             db[video_id].delete_many({})
+        #             # Insère tous les nouveaux documents
+        #             db[video_id].insert_many(comments_data)
 
 
-            self.data_base_deconnexion(client)
+        #         self.data_base_deconnexion(client)
 
-        else :
-            # Insertion
-            # logger.info("Insertion des données dans MongoDB...")
-            collection.insert_many(df.to_dict(orient="records"))
-            logger.info("Données insérées avec succès dans MongoDB.")
-            self.data_base_deconnexion(client)
+        #     else :
+        #         # Insertion
+        #         logger.info("Insertion des données dans MongoDB...")
+        #         if comments_data:
+        #             collection.insert_many(df.to_dict(orient="records"))
+        #             logger.info("Données insérées avec succès dans MongoDB.")
+        #         self.data_base_deconnexion(client)
+
+        # except Exception as e:
+        #     logger.error(f"⚠️ Erreur lors du chargement des données : {e}")
 
         # Mise à jour de la collection
 

@@ -6,10 +6,13 @@ sys.path.append("/Users/carla/Desktop/GitHub/Projet-RNCP")
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.utils.load import Load
 from datetime import datetime, timedelta
+from src.app.streamlit_config import get_database_connections
 from prefect.schedules import Interval
 from src.utils.extraction import Extraction
 from src.Pipeline1.etl import main_etl
 from prefect import flow, get_run_logger
+from dotenv import load_dotenv
+load_dotenv()
 
 # écraser l'ancienne base et la mettre à jours avec les nouvelles données
 
