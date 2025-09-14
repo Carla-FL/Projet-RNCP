@@ -155,6 +155,7 @@ def perform_analysis(url):
             
             try:
                 db = client[chanel_id]
+                st.write(f"Base de données utilisée : {chanel_id}")
             except Exception as e:
                 st.error(f"Erreur lors de l'extraction du channel_id : {e}")
                 return False
