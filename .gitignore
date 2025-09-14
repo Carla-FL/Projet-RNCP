@@ -24,7 +24,7 @@ src/utils/bestmodel.pkl
 **.docx
 BLOC5_pres.pptx
 BLOC5.pptx
-pistes
+**pistes/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

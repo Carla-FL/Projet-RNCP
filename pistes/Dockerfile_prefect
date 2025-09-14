@@ -1,5 +1,0 @@
-# Dockerfile_prefect
-FROM prefecthq/prefect:3.4.11-python3.10
-
-# Installer prefect-docker
-RUN pip install --no-cache-dir "prefect-docker"
