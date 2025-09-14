@@ -17,6 +17,8 @@ from gensim.models import Word2Vec
 from gensim.utils import simple_preprocess
 from prefect import task, flow, get_run_logger
 from transformers import pipeline
+# Nouveau import en haut du fichier
+from model_manager import get_sentiment_model, get_sentiment
 
 nlp = spacy.load("fr_core_news_sm")
 stopwords = list(nlp.Defaults.stop_words)
@@ -125,20 +127,20 @@ def get_tfidf_vector(df, text='comment_clean_lem'):
     return df
 
 """ ________________________________________________________________    analyse  ________________________________________________________________"""
-@task(name='sentiment_model_creation', description="Création du modèle d'analyse des sentiments")
-def get_sentiment_model(path=None): # '/Users/carla/Desktop/GitHub/Projet-RNCP/src/utils/bestmodel.pkl'
-    # with open(path, 'rb') as fichier_modele:
-    #     model = pickle.load(fichier_modele)
-    model = pipeline("sentiment-analysis", model="cardiffnlp/twitter-xlm-roberta-base-sentiment-multilingual", truncation=True,max_length=512)
-    return model
+# @task(name='sentiment_model_creation', description="Création du modèle d'analyse des sentiments")
+# def get_sentiment_model(path=None): # '/Users/carla/Desktop/GitHub/Projet-RNCP/src/utils/bestmodel.pkl'
+#     # with open(path, 'rb') as fichier_modele:
+#     #     model = pickle.load(fichier_modele)
+#     model = pipeline("sentiment-analysis", model="cardiffnlp/twitter-xlm-roberta-base-sentiment-multilingual", truncation=True,max_length=512)
+#     return model
 
-@task(name='sentiment_analyse', description="Analyse des sentiments des commentaires")
-def get_sentiment(df, model, text='comment'):
-    model = get_sentiment_model() 
-    # df['sentiment'] = df[text].apply(lambda x: model.predict([x])[0])
-    df['sentiment']= df[text].apply(lambda x: model(x)[0].get('label'))
-    df['sentiment_score'] = df[text].apply(lambda x: model(x)[0].get('score'))
-    return df
+# @task(name='sentiment_analyse', description="Analyse des sentiments des commentaires")
+# def get_sentiment(df, model, text='comment'):
+#     model = get_sentiment_model() 
+#     # df['sentiment'] = df[text].apply(lambda x: model.predict([x])[0])
+#     df['sentiment']= df[text].apply(lambda x: model(x)[0].get('label'))
+#     df['sentiment_score'] = df[text].apply(lambda x: model(x)[0].get('score'))
+#     return df
 
 
 """ ________________________________________________________________  Main  ________________________________________________________________"""

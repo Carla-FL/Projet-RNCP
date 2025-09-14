@@ -5,6 +5,14 @@ sys.path.append("/Users/carla/Desktop/GitHub/Projet-RNCP")
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import streamlit as st
 from pages import page1, page2
+import streamlit as st
+from streamlit_config import initialize_streamlit_app, get_model_manager, add_debug_sidebar
+
+# Initialisation
+logger = initialize_streamlit_app()
+
+# Sidebar de debug (optionnel)
+add_debug_sidebar()
 
 st.set_page_config(layout="wide",
                 page_title="YOU REVIEW ANALYSER")

@@ -27,8 +27,9 @@ class CloudMigrator:
         try:
             mongo_user = os.getenv("MONGO_USERNAME", "admin")
             mongo_pass = os.getenv("MONGO_PASSWORD", "")
-            
-            connection_string = f"mongodb://{mongo_user}:{mongo_pass}@localhost:27018/"
+            mongo_port = os.getenv("MONGO_PORT", "27018")
+
+            connection_string = f"mongodb://{mongo_user}:{mongo_pass}@localhost:{mongo_port}/"
             self.local_mongo_client = pymongo.MongoClient(connection_string)
             
             # Test de connexion
@@ -82,22 +83,38 @@ class CloudMigrator:
             logger.error(f"❌ Erreur connexion Neon PostgreSQL: {e}")
             return False
     
-    def migrate_mongodb_data(self, database_name: str = "youtube_analysis"):
+    def migrate_mongodb_data(self, database_name_cloud :str="youtube-analysis"): # database_name_local: str = "UCDkl5M0WVaddTWE4rr2cSeA"
         """Migration des données MongoDB"""
         if not self.local_mongo_client or not self.cloud_mongo_client:
             logger.error("❌ Connexions MongoDB non établies")
             return False
         
         try:
+            # Détecter automatiquement la base locale si non spécifiée
+            if not database_name_local:
+                db_names = self.local_mongo_client.list_database_names()
+                # Exclure les bases système
+                user_dbs = [name for name in db_names if name not in ['admin', 'local', 'config']]
+                if user_dbs:
+                    database_name_local = user_dbs[0]  # Prendre la première base utilisateur
+                    logger.info(f"🔍 Base locale détectée automatiquement: {database_name_local}")
+                else:
+                    logger.error("❌ Aucune base de données utilisateur trouvée")
+                    return False
+
             # Base locale
-            local_db = self.local_mongo_client[database_name]
+            local_db = self.local_mongo_client[database_name_local]
             
             # Base cloud
-            cloud_db = self.cloud_mongo_client[database_name]
+            cloud_db = self.cloud_mongo_client[database_name_cloud]
             
             # Lister les collections
             collections = local_db.list_collection_names()
             logger.info(f"📋 Collections trouvées: {collections}")
+
+            if not collections:
+                logger.warning("⚠️ Aucune collection trouvée dans la base locale")
+                return True
             
             total_docs = 0
             for collection_name in collections:
@@ -114,35 +131,52 @@ class CloudMigrator:
                 # Collection cloud
                 cloud_collection = cloud_db[collection_name]
                 
-                # Vider la collection cloud si elle existe
-                cloud_collection.delete_many({})
+                #  Vider complètement la collection cloud
+                deleted_count = cloud_collection.delete_many({}).deleted_count
+                logger.info(f"🧹 {deleted_count} documents supprimés de {collection_name} sur Atlas")
                 
                 # Migration par batch pour éviter les timeouts
-                batch_size = 1000
+                batch_size = 500
                 docs_migrated = 0
+
+                # Récupérer tous les documents
+                logger.info(f"📥 Récupération de {local_count} documents...")
+                all_docs = list(local_collection.find())
                 
-                for batch in local_collection.find().batch_size(batch_size):
-                    batch_docs = []
-                    current_batch = [batch]  # Premier document
+                # Traiter par batch
+                for i in range(0, len(all_docs), batch_size):
+                    batch = all_docs[i:i + batch_size]
+                    batch_num = i // batch_size + 1
+                    total_batches = (len(all_docs) + batch_size - 1) // batch_size
                     
                     # Récupérer le batch complet
                     try:
-                        for _ in range(batch_size - 1):
-                            batch_docs.append(next(local_collection.find().skip(docs_migrated + len(current_batch))))
-                            current_batch.extend(batch_docs[-1:])
-                    except StopIteration:
-                        pass  # Fin des documents
-                    
-                    if current_batch:
-                        # Insérer le batch
-                        cloud_collection.insert_many(current_batch)
-                        docs_migrated += len(current_batch)
-                        logger.info(f"   📄 {docs_migrated}/{local_count} documents migrés")
+                        # Insérer le batch (ordered=False pour continuer même si erreur)
+                        result = cloud_collection.insert_many(batch, ordered=False)
+                        docs_migrated += len(result.inserted_ids)
+                        logger.info(f"   📄 Batch {batch_num}/{total_batches}: {len(result.inserted_ids)} documents insérés")
+                        
+                    except pymongo.errors.BulkWriteError as e:
+                        # Gérer les erreurs bulk (ex: doublons)
+                        inserted_count = e.details.get('nInserted', 0)
+                        docs_migrated += inserted_count
+                        logger.warning(f"⚠️ Batch {batch_num}/{total_batches}: {inserted_count} insérés, {len(e.details.get('writeErrors', []))} erreurs")
+                        
+                    except Exception as e:
+                        logger.error(f"❌ Erreur batch {batch_num}: {e}")
+                        # Essayer document par document pour ce batch
+                        for doc_idx, doc in enumerate(batch):
+                            try:
+                                cloud_collection.insert_one(doc)
+                                docs_migrated += 1
+                            except:
+                                logger.debug(f"Document {doc_idx} ignoré (probablement un doublon)")
+                
                 
                 total_docs += docs_migrated
-                logger.info(f"✅ Collection {collection_name}: {docs_migrated} documents migrés")
+                logger.info(f"✅ Collection {collection_name}: {docs_migrated}/{local_count} documents migrés")
             
-            logger.info(f"🎉 Migration MongoDB terminée: {total_docs} documents au total")
+            logger.info(f"🎉 Migration MongoDB terminée: {total_docs} documents au total migrés vers '{database_name_cloud}'")
             return True
             
         except Exception as e:
@@ -156,173 +190,230 @@ class CloudMigrator:
             return False
         
         try:
-            local_cur = self.local_pg_conn.cursor()
             cloud_cur = self.cloud_pg_conn.cursor()
             
-            # Lister les tables Prefect
-            local_cur.execute("""
-                SELECT tablename FROM pg_tables 
-                WHERE schemaname = 'public' 
-                AND tablename LIKE '%prefect%' OR tablename IN ('flow', 'flow_run', 'task_run');
-            """)
+            logger.info("🔧 Préparation de la base Neon pour Prefect...")
             
-            tables = [row[0] for row in local_cur.fetchall()]
-            logger.info(f"📋 Tables Prefect trouvées: {tables}")
+            # Test de la connexion et récupération des infos
+            cloud_cur.execute("SELECT version();")
+            version = cloud_cur.fetchone()[0]
+            logger.info(f"📊 Version PostgreSQL Neon: {version}")
             
-            if not tables:
-                logger.warning("⚠️ Aucune table Prefect trouvée, migration des métadonnées seulement")
-                return True
+            # Créer le schéma public si nécessaire
+            try:
+                cloud_cur.execute("CREATE SCHEMA IF NOT EXISTS public;")
+                self.cloud_pg_conn.commit()
+                logger.info("✅ Schéma public vérifié sur Neon")
+            except Exception as e:
+                logger.debug(f"Schéma public existe déjà: {e}")
             
-            for table_name in tables:
-                logger.info(f"🔄 Migration table: {table_name}")
-                
-                # Compter les lignes
-                local_cur.execute(f"SELECT COUNT(*) FROM {table_name}")
-                row_count = local_cur.fetchone()[0]
-                
-                if row_count == 0:
-                    logger.info(f"⏭️ Table {table_name} vide, ignorée")
-                    continue
-                
-                # Récupérer la structure de la table
-                local_cur.execute(f"""
-                    SELECT column_name, data_type, is_nullable, column_default
-                    FROM information_schema.columns
-                    WHERE table_name = '{table_name}'
-                    ORDER BY ordinal_position;
+            # Créer une table de test pour vérifier les permissions
+            try:
+                cloud_cur.execute("""
+                    CREATE TABLE IF NOT EXISTS migration_test (
+                        id SERIAL PRIMARY KEY,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        status TEXT
+                    );
                 """)
                 
-                columns = local_cur.fetchall()
+                # Insérer un enregistrement de test
+                cloud_cur.execute("""
+                    INSERT INTO migration_test (status) 
+                    VALUES ('Migration script executed successfully');
+                """)
                 
-                # Créer la table sur le cloud (si elle n'existe pas)
-                create_table_sql = f"CREATE TABLE IF NOT EXISTS {table_name} ("
-                column_defs = []
+                self.cloud_pg_conn.commit()
                 
-                for col_name, data_type, is_nullable, col_default in columns:
-                    col_def = f"{col_name} {data_type}"
-                    if is_nullable == 'NO':
-                        col_def += " NOT NULL"
-                    if col_default:
-                        col_def += f" DEFAULT {col_default}"
-                    column_defs.append(col_def)
+                # Vérifier l'insertion
+                cloud_cur.execute("SELECT COUNT(*) FROM migration_test;")
+                count = cloud_cur.fetchone()[0]
+                logger.info(f"✅ Test d'écriture réussi: {count} enregistrement(s) dans migration_test")
                 
-                create_table_sql += ", ".join(column_defs) + ");"
+                # Nettoyer
+                cloud_cur.execute("DROP TABLE migration_test;")
+                self.cloud_pg_conn.commit()
                 
-                try:
-                    cloud_cur.execute(f"DROP TABLE IF EXISTS {table_name} CASCADE;")
-                    cloud_cur.execute(create_table_sql)
-                    self.cloud_pg_conn.commit()
-                except Exception as e:
-                    logger.warning(f"⚠️ Erreur création table {table_name}: {e}")
-                    continue
-                
-                # Migration des données
-                local_cur.execute(f"SELECT * FROM {table_name}")
-                rows = local_cur.fetchall()
-                
-                if rows:
-                    # Préparer l'insertion
-                    col_names = [col[0] for col in columns]
-                    placeholders = ", ".join(["%s"] * len(col_names))
-                    insert_sql = f"INSERT INTO {table_name} ({', '.join(col_names)}) VALUES ({placeholders})"
-                    
-                    cloud_cur.executemany(insert_sql, rows)
-                    self.cloud_pg_conn.commit()
-                
-                logger.info(f"✅ Table {table_name}: {len(rows)} lignes migrées")
+            except Exception as e:
+                logger.error(f"❌ Test d'écriture échoué: {e}")
+                return False
             
-            logger.info("🎉 Migration PostgreSQL terminée")
+            logger.info("✅ Base Neon PostgreSQL prête pour Prefect")
+            logger.info("ℹ️ Les tables Prefect se créeront automatiquement au premier démarrage de l'orchestrateur")
+            
+            # Si on a une connexion locale, on peut essayer de migrer quelques métadonnées
+            if self.local_pg_conn:
+                logger.info("🔄 Tentative de migration des métadonnées Prefect...")
+                try:
+                    local_cur = self.local_pg_conn.cursor()
+                    
+                    # Vérifier s'il y a des données Prefect
+                    local_cur.execute("""
+                        SELECT COUNT(*) FROM information_schema.tables 
+                        WHERE table_schema = 'public' 
+                        AND (table_name LIKE '%prefect%' OR table_name IN ('flow', 'flow_run', 'task_run'));
+                    """)
+                    
+                    table_count = local_cur.fetchone()[0]
+                    if table_count > 0:
+                        logger.info(f"📊 {table_count} tables Prefect trouvées localement")
+                        logger.info("⚠️ Migration des données Prefect ignorée (compatibilité)")
+                        logger.info("💡 Conseil: Redéploye tes flows Prefect après la migration")
+                    else:
+                        logger.info("ℹ️ Aucune table Prefect trouvée localement")
+                        
+                    local_cur.close()
+                        
+                except Exception as e:
+                    logger.warning(f"⚠️ Vérification locale Prefect échouée: {e}")
+            
             return True
             
         except Exception as e:
-            logger.error(f"❌ Erreur migration PostgreSQL: {e}")
+            logger.error(f"❌ Erreur préparation PostgreSQL: {e}")
             return False
         finally:
-            if 'local_cur' in locals():
-                local_cur.close()
             if 'cloud_cur' in locals():
                 cloud_cur.close()
     
     def close_connections(self):
         """Fermer toutes les connexions"""
+        connections_closed = 0
+        
         if self.local_mongo_client:
             self.local_mongo_client.close()
+            connections_closed += 1
+            
         if self.cloud_mongo_client:
             self.cloud_mongo_client.close()
+            connections_closed += 1
+            
         if self.local_pg_conn:
             self.local_pg_conn.close()
+            connections_closed += 1
+            
         if self.cloud_pg_conn:
             self.cloud_pg_conn.close()
+            connections_closed += 1
+            
+        logger.info(f"🔌 {connections_closed} connexions fermées")
+
+def check_environment():
+    """Vérifier les variables d'environnement"""
+    required_vars = {
+        "CONNECTING_STRING_ATLAS": "Connection string MongoDB Atlas",
+        "CONNECTING_STRING_NEON": "Connection string Neon PostgreSQL"
+    }
+    
+    missing_vars = []
+    for var, description in required_vars.items():
+        if not os.getenv(var):
+            missing_vars.append(f"{var} ({description})")
+    
+    if missing_vars:
+        logger.error("❌ Variables d'environnement manquantes:")
+        for var in missing_vars:
+            logger.error(f"   - {var}")
+        logger.info("")
+        logger.info("💡 Configure-les dans ton fichier .env ou en variables d'environnement:")
+        logger.info("export CONNECTING_STRING_ATLAS='mongodb+srv://username:password@cluster.mongodb.net/'")
+        logger.info("export CONNECTING_STRING_NEON='postgresql://username:password@hostname:5432/database'")
+        return False
+    
+    return True
 
 def main():
     """Migration principale"""
     print("🚀 Migration des données locales vers le cloud")
-    print("=" * 50)
+    print("=" * 60)
     
-    # Vérifier les variables d'environnement
-    required_vars = [
-        "CONNECTING_STRING_ATLAS",  # Atlas
-        "CONNECTING_STRING_NEON"  # Neon
-    ]
-    
-    missing_vars = [var for var in required_vars if not os.getenv(var)]
-    if missing_vars:
-        logger.error(f"❌ Variables d'environnement manquantes: {missing_vars}")
-        logger.info("💡 Configure-les avec:")
-        logger.info("export CONNECTING_STRING_ATLAS='mongodb+srv://...'")
-        logger.info("export CONNECTING_STRING_NEON='postgresql://...'")
+    # Vérifier l'environnement
+    if not check_environment():
         sys.exit(1)
     
     migrator = CloudMigrator()
+    success = True
     
     try:
-        # Connexions locales
+        # Phase 1: Test des connexions locales
+        logger.info("🔌 Phase 1: Test des connexions locales...")
         mongo_local_ok = migrator.connect_local_mongodb()
         pg_local_ok = migrator.connect_local_postgresql()
         
-        if not mongo_local_ok:
-            logger.warning("⚠️ MongoDB local non accessible, migration ignorée")
-        if not pg_local_ok:
-            logger.warning("⚠️ PostgreSQL local non accessible, migration ignorée")
+        if not mongo_local_ok and not pg_local_ok:
+            logger.error("❌ Aucune connexion locale n'a fonctionné")
+            logger.info("💡 Assure-toi que tes services locaux sont démarrés (docker-compose up)")
+            return False
         
-        # Connexions cloud
+        # Phase 2: Test des connexions cloud
+        logger.info("🌐 Phase 2: Test des connexions cloud...")
+        
+        # MongoDB Atlas
         mongo_cloud_ok = migrator.connect_cloud_mongodb(
             os.getenv("CONNECTING_STRING_ATLAS")
         )
+        
+        # Neon PostgreSQL
         pg_cloud_ok = migrator.connect_cloud_postgresql(
             os.getenv("CONNECTING_STRING_NEON")
         )
         
-        if not mongo_cloud_ok:
-            logger.error("❌ Impossible de se connecter à MongoDB Atlas")
-            return False
-        if not pg_cloud_ok:
-            logger.error("❌ Impossible de se connecter à Neon PostgreSQL")
+        if not mongo_cloud_ok and not pg_cloud_ok:
+            logger.error("❌ Aucune connexion cloud n'a fonctionné")
+            logger.info("💡 Vérifie tes connection strings et la configuration réseau")
             return False
         
-        # Migrations
-        success = True
+        # Phase 3: Migrations
+        logger.info("📦 Phase 3: Migration des données...")
         
+        # Migration MongoDB
         if mongo_local_ok and mongo_cloud_ok:
-            logger.info("📦 Migration MongoDB en cours...")
+            logger.info("🍃 Migration MongoDB en cours...")
             if not migrator.migrate_mongodb_data():
+                logger.warning("⚠️ Migration MongoDB échouée")
                 success = False
+            else:
+                logger.info("✅ Migration MongoDB réussie")
+        else:
+            logger.warning("⏭️ Migration MongoDB ignorée (connexions manquantes)")
         
-        if pg_local_ok and pg_cloud_ok:
-            logger.info("📦 Migration PostgreSQL en cours...")
+        # Migration PostgreSQL
+        if pg_cloud_ok:
+            logger.info("🐘 Préparation PostgreSQL en cours...")
             if not migrator.migrate_postgresql_data():
+                logger.warning("⚠️ Préparation PostgreSQL échouée")
                 success = False
+            else:
+                logger.info("✅ Préparation PostgreSQL réussie")
+        else:
+            logger.warning("⏭️ Préparation PostgreSQL ignorée (connexion cloud manquante)")
         
+        # Résultats finaux
+        print("\n" + "=" * 60)
         if success:
             logger.info("🎉 Migration terminée avec succès!")
-            logger.info("📋 Prochaines étapes:")
-            logger.info("1. Vérifier les données sur les services cloud")
-            logger.info("2. Configurer les secrets sur Streamlit Cloud")
-            logger.info("3. Déployer l'application")
+            print("\n📋 Prochaines étapes:")
+            print("1. Vérifier les données sur MongoDB Atlas et Neon")
+            print("2. Adapter ton code pour utiliser les connexions cloud")
+            print("3. Configurer les secrets sur Streamlit Community Cloud")
+            print("4. Déployer ton application")
+            print("\n🔗 Liens utiles:")
+            print("- MongoDB Atlas: https://cloud.mongodb.com/")
+            print("- Neon Console: https://console.neon.tech/")
+            print("- Streamlit Cloud: https://share.streamlit.io/")
         else:
-            logger.error("❌ Migration terminée avec des erreurs")
+            logger.error("⚠️ Migration terminée avec des erreurs")
+            logger.info("💡 Consulte les logs ci-dessus pour identifier les problèmes")
         
         return success
+        
+    except KeyboardInterrupt:
+        logger.info("\n⏹️ Migration interrompue par l'utilisateur")
+        return False
+        
+    except Exception as e:
+        logger.error(f"💥 Erreur inattendue: {e}")
+        return False
         
     finally:
         migrator.close_connections()
