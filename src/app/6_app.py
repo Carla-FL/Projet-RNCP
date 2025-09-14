@@ -1,7 +1,7 @@
 # import sys
 # sys.path.append("/Users/carla/Desktop/GitHub/Projet-RNCP")
 # import sys
-# import os
+import os
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pathlib
 rootdir = pathlib.Path(__file__).parent.parent.parent.parent.resolve()
@@ -21,7 +21,7 @@ add_debug_sidebar()
 st.set_page_config(layout="wide",
                 page_title="YOU REVIEW ANALYSER")
 
-st.logo(str(rootdir)+"ressources/incon.png", size="large",)
+st.logo(os.path.join(str(rootdir), "ressources", "incon.png", size="large"))
 # logo_path = os.path.join(os.getcwd(), "ressources", "icon.png")  # correction du nom
 # if os.path.exists(logo_path):
 #     st.logo(logo_path, size="large")
