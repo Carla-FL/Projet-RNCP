@@ -4,7 +4,7 @@
 import os
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pathlib
-rootdir = pathlib.Path(__file__).parent.parent.parent.parent.resolve()
+rootdir = pathlib.Path(__file__).parent.parent.parent.parent.parent.resolve()
 import sys
 sys.path.append(str(rootdir))
 import streamlit as st
