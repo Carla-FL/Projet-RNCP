@@ -21,6 +21,9 @@ recovered_translations_20250907_1335.csv
 notebooks/mon_modele_chunks/
 ressources/sentimentnmodel.pkl
 src/utils/bestmodel.pkl
+**.docx
+BLOC5_pres.pptx
+BLOC5.pptx
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
