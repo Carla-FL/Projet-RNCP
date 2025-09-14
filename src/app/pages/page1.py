@@ -1,9 +1,13 @@
 """_________________________________ Dashboard Page 1 ___________________________________"""
-import sys
-sys.path.append("/Users/carla/Desktop/GitHub/Projet-RNCP")
+# import pathlib
+# rootdir = pathlib.Path(__file__).parent.parent.parent.parent.resolve()
+# import sys
+# sys.path.append(str(rootdir))
 # import sys
 # import os
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import streamlit as st
 import json
 import os
@@ -13,6 +17,7 @@ import pandas as pd
 from src.utils.load import Load
 from src.utils.extraction import Extraction
 from wordcloud import WordCloud
+
 
 
 def get_existing_db(client, videoid):
