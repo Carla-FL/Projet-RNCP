@@ -20,7 +20,7 @@ except ImportError:
     def get_database_connections():
         return {
             "mongodb": {
-                "connection_string": os.getenv("MONGODB_CONNECTION_STRING"),
+                "connection_string": os.getenv("CONNECTING_STRING_ATLAS"),
                 "database": os.getenv("MONGODB_DATABASE", "youtube-analysis")
             }
         }
