@@ -201,7 +201,6 @@ def get_sentiment(df, model=None, text='comment'):
     Compatible avec ton code existant
     """
     logger = get_run_logger()
-    import pandas as pd
     
     # Initialiser le gestionnaire si nécessaire
     sentiment_model = get_sentiment_model()
@@ -239,29 +238,29 @@ def get_sentiment(df, model=None, text='comment'):
     
     return df
 
-# Fonction utilitaire pour tester le système
-def test_model_system():
-    """Test du système de modèles"""
-    print("🧪 Test du système de modèles...")
+# # Fonction utilitaire pour tester le système
+# def test_model_system():
+#     """Test du système de modèles"""
+#     print("🧪 Test du système de modèles...")
     
-    try:
-        manager = get_sentiment_model()
-        info = manager.get_model_info()
-        print(f"✅ Modèle chargé: {info}")
+#     try:
+#         manager = get_sentiment_model()
+#         info = manager.get_model_info()
+#         print(f"✅ Modèle chargé: {info}")
         
-        # Test de prédiction
-        test_texts = [
-            "J'adore cette vidéo, elle est fantastique!",
-            "Cette vidéo est vraiment nulle.",
-            "C'est une vidéo normale, sans plus."
-        ]
+#         # Test de prédiction
+#         test_texts = [
+#             "J'adore cette vidéo, elle est fantastique!",
+#             "Cette vidéo est vraiment nulle.",
+#             "C'est une vidéo normale, sans plus."
+#         ]
         
-        for text in test_texts:
-            result = manager.predict(text)
-            print(f"📝 '{text}' → {result['label']} ({result['score']:.3f})")
+#         for text in test_texts:
+#             result = manager.predict(text)
+#             print(f"📝 '{text}' → {result['label']} ({result['score']:.3f})")
             
-    except Exception as e:
-        print(f"❌ Erreur test: {e}")
+#     except Exception as e:
+#         print(f"❌ Erreur test: {e}")
 
-if __name__ == "__main__":
-    test_model_system()
+# if __name__ == "__main__":
+#     test_model_system()
