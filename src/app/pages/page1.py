@@ -1,13 +1,8 @@
 """_________________________________ Dashboard Page 1 ___________________________________"""
-# import pathlib
-# rootdir = pathlib.Path(__file__).parent.parent.parent.parent.resolve()
-# import sys
-# sys.path.append(str(rootdir))
-# import sys
-# import os
-# sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import sys, os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import pathlib
+rootdir = pathlib.Path(__file__).parent.parent.parent.parent.resolve()
+import sys
+sys.path.append(str(rootdir))
 import streamlit as st
 import json
 import os
