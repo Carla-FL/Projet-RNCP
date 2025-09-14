@@ -201,6 +201,7 @@ def get_sentiment(df, model=None, text='comment'):
     Compatible avec ton code existant
     """
     logger = get_run_logger()
+    import pandas as pd
     
     # Initialiser le gestionnaire si nécessaire
     sentiment_model = get_sentiment_model()
@@ -231,10 +232,7 @@ def get_sentiment(df, model=None, text='comment'):
             return 'NEUTRAL', 0.5
     
     # Appliquer l'analyse sur tout le DataFrame
-    df[['sentiment', 'sentiment_score']] = df[text].apply(
-        lambda x: pd.Series(analyze_single_comment(str(x)))
-    )
-    
+    df[['sentiment', 'sentiment_score']] = df[text].apply(lambda x: pd.Series(analyze_single_comment(str(x))))
     # Statistiques
     sentiment_counts = df['sentiment'].value_counts()
     logger.info(f"📈 Résultats analyse: {dict(sentiment_counts)}")
