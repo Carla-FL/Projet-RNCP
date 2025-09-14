@@ -7,6 +7,7 @@ import logging
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from src.Pipeline1.etl import main_etl
+import pandas as pd
 
 # Charger les variables d'environnement
 load_dotenv()

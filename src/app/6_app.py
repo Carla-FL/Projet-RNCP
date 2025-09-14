@@ -11,6 +11,7 @@ import streamlit as st
 from pages import page1, page2
 import streamlit as st
 from streamlit_config import initialize_streamlit_app, get_model_manager, add_debug_sidebar
+import pandas as pd
 
 # Initialisation
 logger = initialize_streamlit_app()
