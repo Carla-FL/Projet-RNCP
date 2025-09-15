@@ -1,4 +1,4 @@
-import pandas as pd
+import pandas 
 import os
 import pickle
 import logging
@@ -227,7 +227,7 @@ def get_sentiment(df, model=None, text='comment'):
             return 'NEUTRAL', 0.5
     
     # Appliquer l'analyse sur tout le DataFrame
-    df[['sentiment', 'sentiment_score']] = df[text].apply(lambda x: pd.Series(analyze_single_comment(str(x))))
+    df[['sentiment', 'sentiment_score']] = df[text].apply(lambda x: pandas.Series(analyze_single_comment(str(x))))
     # Statistiques
     sentiment_counts = df['sentiment'].value_counts()
     logger.info(f"📈 Résultats analyse: {dict(sentiment_counts)}")
