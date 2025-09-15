@@ -1,7 +1,3 @@
-"""
-Gestionnaire de modèles d'analyse de sentiment avec fallback automatique
-Remplace ta fonction get_sentiment_model() actuelle
-"""
 import pandas as pd
 import os
 import pickle
