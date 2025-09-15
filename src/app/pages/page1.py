@@ -16,28 +16,110 @@ from wordcloud import WordCloud
 
 
 def get_existing_db(client, videoid):
-    for db_name in client.list_database_names():
-        if db_name in ("admin", "config", "local"):  # filtrer les bases internes MongoDB
-            continue
+    # for db_name in client.list_database_names():
+    #     if db_name in ("admin", "config", "local"):  # filtrer les bases internes MongoDB
+    #         continue
+    #     db = client[db_name]
+    #     # Lister toutes les collections de cette base
+    #     collections = db.list_collection_names()
+    #     if videoid in collections:
+    #         return db.name
+    #     #else:
+    #         #raise Exception("La vidéo n'existe pas dans la base de données. Veuillez lancer l'extraction des données.")
+    try:
+        # Mode cloud : une seule base
+        from streamlit_config import get_database_connections
+        db_config = get_database_connections()
+        db_name = db_config["mongodb"]["database"]
+        
+        # Vérifier si la vidéo existe dans cette base
         db = client[db_name]
-        # Lister toutes les collections de cette base
         collections = db.list_collection_names()
-        if videoid in collections:
-            return db.name
-        #else:
-            #raise Exception("La vidéo n'existe pas dans la base de données. Veuillez lancer l'extraction des données.")
-
-
-def get_kpi(db, videoid):
-    viedo_title = db[videoid].find_one(sort=[('publishedAt', -1)])['titre']
-    synchronisation_date = db[videoid].find_one(sort=[('extractedAt', -1)])['extractedAt']
-    total_comments = db[videoid].count_documents({})
-    most_liked_comment = db[videoid].find_one(sort=[("likeCount", -1)])["comment"]
-    most_liked_comment_publish_date = db[videoid].find_one(sort=[("likeCount", -1)])["publishedAt"]
-    like_count = db[videoid].find_one(sort=[("likeCount", -1)])["likeCount"]
+        
+        # Chercher la collection qui contient cette vidéo
+        for collection_name in collections:
+            if videoid in collection_name:
+                return db_name
+                
+    except ImportError:
+        # Mode local : bases multiples
+        for db_name in client.list_database_names():
+            if db_name in ("admin", "config", "local"):
+                continue
+            db = client[db_name]
+            if videoid in db.list_collection_names():
+                return db_name
     
-    return viedo_title, synchronisation_date, total_comments, most_liked_comment, most_liked_comment_publish_date, like_count
+    return None
 
+
+def get_kpi(client, db_name, videoid):
+    # viedo_title = db[videoid].find_one(sort=[('publishedAt', -1)])['titre']
+    # synchronisation_date = db[videoid].find_one(sort=[('extractedAt', -1)])['extractedAt']
+    # total_comments = db[videoid].count_documents({})
+    # most_liked_comment = db[videoid].find_one(sort=[("likeCount", -1)])["comment"]
+    # most_liked_comment_publish_date = db[videoid].find_one(sort=[("likeCount", -1)])["publishedAt"]
+    # like_count = db[videoid].find_one(sort=[("likeCount", -1)])["likeCount"]
+    
+    # return viedo_title, synchronisation_date, total_comments, most_liked_comment, most_liked_comment_publish_date, like_count
+    try:
+        db = client[db_name]
+        
+        # Déterminer le nom de la collection
+        try:
+            from streamlit_config import get_database_connections
+            # Mode cloud : collection préfixée
+            collections = db.list_collection_names()
+            collection_name = None
+            for coll in collections:
+                if videoid in coll:
+                    collection_name = coll
+                    break
+        except ImportError:
+            # Mode local : collection = videoid
+            collection_name = videoid
+        
+        if not collection_name or collection_name not in db.list_collection_names():
+            raise ValueError(f"Collection pour vidéo {videoid} non trouvée")
+        
+        collection = db[collection_name]
+        
+        # Vérifier qu'il y a des documents
+        if collection.count_documents({}) == 0:
+            raise ValueError("Collection vide")
+        
+        # Récupération sécurisée des données
+        latest_doc = collection.find_one(sort=[('publishedAt', -1)])
+        if not latest_doc:
+            raise ValueError("Aucun document trouvé")
+        
+        # Extraction sécurisée des champs
+        video_title = latest_doc.get('titre', 'Titre non disponible')
+        sync_date = latest_doc.get('extractedAt', 'Date inconnue')
+        
+        # Statistiques
+        total_comments = collection.count_documents({})
+        
+        # Commentaire le plus aimé
+        most_liked_doc = collection.find_one(
+            {"likeCount": {"$exists": True}},
+            sort=[("likeCount", -1)]
+        )
+        
+        if most_liked_doc:
+            most_liked_comment = most_liked_doc.get('comment', 'Commentaire non disponible')
+            most_liked_date = most_liked_doc.get('publishedAt', 'Date inconnue')
+            like_count = most_liked_doc.get('likeCount', 0)
+        else:
+            most_liked_comment = "Aucun commentaire avec likes"
+            most_liked_date = "N/A"
+            like_count = 0
+        
+        return video_title, sync_date, total_comments, most_liked_comment, most_liked_date, like_count
+        
+    except Exception as e:
+        st.error(f"Erreur dans get_kpi: {str(e)}")
+        return "Erreur", "Erreur", 0, "Erreur", "Erreur", 0
 
 def initialize_session_state():
     """Initialise les variables de session si elles n'existent pas"""
@@ -154,7 +236,7 @@ def perform_analysis(url):
                 st.success("Done!")
             
             try:
-                st.write(f"Base de données utilisée : {chanel_id}")
+                # st.write(f"Base de données utilisée : {chanel_id}")
                 db = client[chanel_id]
             except Exception as e:
                 st.error(f"Erreur lors de l'extraction du channel_id : {e}")
