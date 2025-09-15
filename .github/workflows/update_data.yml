@@ -17,4 +17,4 @@ jobs:
           MONGODB_CONNECTION_STRING: ${{ secrets.MONGODB_CONNECTION_STRING }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           DEVELOPER_KEY: ${{ secrets.DEVELOPER_KEY }}
-        run: python synchronisation.py
+        run: python maj.py #synchronisation.py
