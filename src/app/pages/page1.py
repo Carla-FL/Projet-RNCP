@@ -202,64 +202,164 @@ def display_analysis_results():
 
 def perform_analysis(url):
     """Effectue l'analyse et stocke les résultats dans session_state"""
+    # try:
+    #     extract = Extraction(video_url=url)
+    #     videoid = extract.url2id()
+    #     st.session_state['videoid'] = videoid
+    # except Exception as e:
+    #     st.error(f"Erreur veuillez entrer une URL YouTube valide. : {e}")
+    #     return False
+    
+    # client = Load().data_base_connexion()
+    # st.session_state['client_mdb'] = client
+    
+    # try:
+    #     db_name = get_existing_db(client, videoid)
+    #     st.session_state['data_base_name'] = str(db_name)
+    # except Exception as e:
+    #     st.error(f"Erreur lors de get_existing_db : {e}")
+    #     return False
+    
+    # data_exists = False
+    # try:
+    #     db = client[db_name]
+    #     if videoid in db.list_collection_names():
+    #         st.success("La vidéo existe déjà dans la base de données")
+    #         data_exists = True
+    # except Exception as e:
+    #     data_exists = False
+    #     st.error(f"Les données n'existent pas encore, on lance l'extraction des données ...")
+        
+    #     if not data_exists:
+    #         with st.spinner("Wait for it...", show_time=True):
+    #             chanel_id = main_etl(url, with_channel_id=True)
+    #             st.success("Done!")
+            
+    #         try:
+    #             # st.write(f"Base de données utilisée : {chanel_id}")
+    #             db = client[chanel_id]
+    #         except Exception as e:
+    #             st.error(f"Erreur lors de l'extraction du channel_id : {e}")
+    #             return False
+    
+    # if db is not None:
+    #     # Récupérer les KPI
+    #     video_title, sync_date, total_comments, most_liked_comment, most_liked_date, like_count = get_kpi(db, videoid)
+        
+    #     # Préparer les données du DataFrame
+    #     df = pd.DataFrame(list(db[videoid].find()))
+    #     text = df['comment_clean_lem'].dropna()
+    #     wordcloud_text = " ".join(text)
+        
+    #     # Données pour le graphique
+    #     df_chart = pd.DataFrame(list(db[videoid].find(
+    #         {},
+    #         {"publishedAt": 1, "comment": 1, "_id": 0}
+    #     )))
+    #     df_chart['date'] = pd.to_datetime(df_chart['publishedAt']).dt.date
+    #     comments_per_day = df_chart['date'].value_counts().sort_index()
+        
+    #     # Stocker toutes les données dans session_state
+    #     st.session_state.video_data = {
+    #         'url': url,
+    #         'video_title': video_title,
+    #         'sync_date': sync_date,
+    #         'total_comments': total_comments,
+    #         'most_liked_comment': most_liked_comment,
+    #         'most_liked_date': most_liked_date,
+    #         'like_count': like_count,
+    #         'wordcloud_text': wordcloud_text,
+    #         'comments_per_day': {
+    #             'dates': comments_per_day.index.tolist(),
+    #             'counts': comments_per_day.values.tolist()
+    #         }
+    #     }
+        
+    #     st.session_state.analysis_done = True
+    #     Load().data_base_deconnexion(client)
+    #     return True
+    
+    # return False
     try:
         extract = Extraction(video_url=url)
         videoid = extract.url2id()
         st.session_state['videoid'] = videoid
     except Exception as e:
-        st.error(f"Erreur veuillez entrer une URL YouTube valide. : {e}")
+        st.error(f"URL YouTube invalide: {e}")
         return False
     
     client = Load().data_base_connexion()
     st.session_state['client_mdb'] = client
     
-    try:
-        db_name = get_existing_db(client, videoid)
-        st.session_state['data_base_name'] = str(db_name)
-    except Exception as e:
-        st.error(f"Erreur lors de get_existing_db : {e}")
-        return False
+    # Chercher si la vidéo existe déjà
+    db_name = get_existing_db(client, videoid)
+    data_exists = db_name is not None
     
-    data_exists = False
-    try:
-        db = client[db_name]
-        if videoid in db.list_collection_names():
-            st.success("La vidéo existe déjà dans la base de données")
-            data_exists = True
-    except Exception as e:
-        data_exists = False
-        st.error(f"Les données n'existent pas encore, on lance l'extraction des données ...")
-        
-        if not data_exists:
-            with st.spinner("Wait for it...", show_time=True):
-                chanel_id = main_etl(url, with_channel_id=True)
-                st.success("Done!")
-            
+    if not data_exists:
+        st.info("Vidéo non trouvée, lancement de l'extraction...")
+        with st.spinner("Extraction en cours..."):
             try:
-                # st.write(f"Base de données utilisée : {chanel_id}")
-                db = client[chanel_id]
+                channel_id = main_etl(url, with_channel_id=True)
+                if channel_id:
+                    db_name = channel_id
+                    st.success("Extraction terminée!")
+                else:
+                    st.error("Échec de l'extraction")
+                    return False
             except Exception as e:
-                st.error(f"Erreur lors de l'extraction du channel_id : {e}")
+                st.error(f"Erreur lors de l'extraction: {e}")
                 return False
+    else:
+        st.success("Vidéo trouvée dans la base de données")
     
-    if db is not None:
-        # Récupérer les KPI
-        video_title, sync_date, total_comments, most_liked_comment, most_liked_date, like_count = get_kpi(db, videoid)
+    st.session_state['data_base_name'] = db_name
+    
+    # Récupérer les KPI
+    try:
+        video_title, sync_date, total_comments, most_liked_comment, most_liked_date, like_count = get_kpi(client, db_name, videoid)
         
-        # Préparer les données du DataFrame
-        df = pd.DataFrame(list(db[videoid].find()))
-        text = df['comment_clean_lem'].dropna()
-        wordcloud_text = " ".join(text)
+        # Préparer le wordcloud
+        try:
+            # Mode cloud/local
+            try:
+                from streamlit_config import get_database_connections
+                collections = client[db_name].list_collection_names()
+                collection_name = None
+                for coll in collections:
+                    if videoid in coll:
+                        collection_name = coll
+                        break
+            except ImportError:
+                collection_name = videoid
+            
+            if collection_name:
+                df = pd.DataFrame(list(client[db_name][collection_name].find()))
+                if 'comment_clean_lem' in df.columns:
+                    text = df['comment_clean_lem'].dropna()
+                    wordcloud_text = " ".join(text)
+                else:
+                    wordcloud_text = "Données de text nettoyé non disponibles"
+                
+                # Données pour graphique
+                if 'publishedAt' in df.columns:
+                    df['date'] = pd.to_datetime(df['publishedAt']).dt.date
+                    comments_per_day = df['date'].value_counts().sort_index()
+                    chart_data = {
+                        'dates': comments_per_day.index.tolist(),
+                        'counts': comments_per_day.values.tolist()
+                    }
+                else:
+                    chart_data = {'dates': [], 'counts': []}
+            else:
+                wordcloud_text = "Erreur de collection"
+                chart_data = {'dates': [], 'counts': []}
+                
+        except Exception as e:
+            st.warning(f"Erreur préparation données: {e}")
+            wordcloud_text = "Erreur préparation wordcloud"
+            chart_data = {'dates': [], 'counts': []}
         
-        # Données pour le graphique
-        df_chart = pd.DataFrame(list(db[videoid].find(
-            {},
-            {"publishedAt": 1, "comment": 1, "_id": 0}
-        )))
-        df_chart['date'] = pd.to_datetime(df_chart['publishedAt']).dt.date
-        comments_per_day = df_chart['date'].value_counts().sort_index()
-        
-        # Stocker toutes les données dans session_state
+        # Stocker les données
         st.session_state.video_data = {
             'url': url,
             'video_title': video_title,
@@ -269,17 +369,17 @@ def perform_analysis(url):
             'most_liked_date': most_liked_date,
             'like_count': like_count,
             'wordcloud_text': wordcloud_text,
-            'comments_per_day': {
-                'dates': comments_per_day.index.tolist(),
-                'counts': comments_per_day.values.tolist()
-            }
+            'comments_per_day': chart_data
         }
         
         st.session_state.analysis_done = True
         Load().data_base_deconnexion(client)
         return True
-    
-    return False
+        
+    except Exception as e:
+        st.error(f"Erreur lors de l'analyse: {e}")
+        Load().data_base_deconnexion(client)
+        return False
 
 
 # @st.cache_data
