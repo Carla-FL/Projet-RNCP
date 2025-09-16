@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from unidecode import unidecode
 from gensim.models import Word2Vec
 from gensim.utils import simple_preprocess
-from prefect import task, flow, get_run_logger
+# from prefect import task, flow, get_run_logger
 from transformers import pipeline
 # Nouveau import en haut du fichier
 from model_manager import get_sentiment_model, get_sentiment
@@ -74,7 +74,7 @@ def preprocessing(text, join=True, methode='lemma', extra_stopwords : list = Non
 """ ____________________________________________________________  Vectorisation  ______________________________________________________________"""
 
 
-@task(name='w2vec_model_creation', description="Création du modèle Word2Vec à partir des données prétraitées")
+# @task(name='w2vec_model_creation', description="Création du modèle Word2Vec à partir des données prétraitées")
 def make_w2vec_model(df:pd.DataFrame, text='comment_clean_lem'):
     """
     Obtenir le vecteur d'un mot spécifique
@@ -110,7 +110,7 @@ def get_w2vec_vector(df, text='comment_clean_lem'):
     except ValueError as e:
         raise ValueError(f"Erreur lors de la création du modèle Word2Vec : {e}")
 
-@task(name='tfidf_vector_creation', description="Extraction des vecteurs TF-IDF à partir des données prétraitées")  
+# @task(name='tfidf_vector_creation', description="Extraction des vecteurs TF-IDF à partir des données prétraitées")  
 def get_tfidf_vector(df, text='comment_clean_lem'):
     """
     Obtenir le vecteur TF-IDF d'une phrase
@@ -144,28 +144,28 @@ def get_tfidf_vector(df, text='comment_clean_lem'):
 
 
 """ ________________________________________________________________  Main  ________________________________________________________________"""
-@flow(name='etl_transformation_pipeline', description="Pipeline de transformation des données pour l'ETL")
+# @flow(name='etl_transformation_pipeline', description="Pipeline de transformation des données pour l'ETL")
 def main_transformation(df, comment = 'comment', path='extra_expressions.txt'):
-    logger= get_run_logger()
+    # logger= get_run_logger()
     try:
         # df, video_id, channel_id = Extraction.main_extraction()  # Assuming main() returns a DataFrame with a 'comment' column
         df = df.dropna(subset=[comment])  # Drop rows where 'comment' is NaN
         df['tokens_clean_lem'] = df[comment].apply(lambda x: preprocessing(x, join=False, path=path))
         df['comment_clean_lem'] = df[comment].astype(str).apply(lambda x: preprocessing(x, join=True, path=path))
-        logger.info("Nettoyage des données terminée avec succès.")
+        # logger.info("Nettoyage des données terminée avec succès.")
         
         # Vectorisation
         df = get_w2vec_vector(df, text='comment_clean_lem')
-        logger.info("Vectorisation w2vec des données terminée avec succès.")
+        # logger.info("Vectorisation w2vec des données terminée avec succès.")
 
         df = get_tfidf_vector(df, text='comment_clean_lem')
-        logger.info("Vectorisation tfidf des données terminée avec succès.")
+        # logger.info("Vectorisation tfidf des données terminée avec succès.")
 
         # Sentiment Analysis
         df = get_sentiment(df,model=None, text='comment')  # Remplacez 'model' par votre modèle de sentiment
         return df # video_id, channel_id
     except Exception as e:
-        logger.error(f"Erreur lors de la transformation des données : {e}")
+        # logger.error(f"Erreur lors de la transformation des données : {e}")
         raise e
 
 # if __name__ == "__main__":

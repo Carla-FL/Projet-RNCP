@@ -1,18 +1,27 @@
 import sys
 import os
 import pathlib
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import json
 import logging
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from src.Pipeline1.etl import main_etl
+# from src.Pipeline1.etl import main_etl
 import pandas as pd
+
+
+# Configuration du chemin - compatible local et GitHub Actions
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(os.path.dirname(current_dir))  # Remonte au root du projet
+sys.path.insert(0, project_root)
+sys.path.insert(0, os.path.join(project_root, 'src'))
+sys.path.insert(0, os.path.join(project_root, 'src', 'utils'))
 
 # Charger les variables d'environnement
 load_dotenv()
 
-# Configuration du logging pour GitHub Actions
+# Configuration du logging
+os.makedirs('logs', exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -28,191 +37,141 @@ class YouTubeSynchronizer:
     
     def __init__(self):
         self.force_update = os.getenv('FORCE_UPDATE', 'false').lower() == 'true'
-        self.target_channel = os.getenv('TARGET_CHANNEL', '')
         self.summary = {
             'start_time': datetime.now().isoformat(),
             'records_processed': 0,
             'videos_updated': 0,
-            'errors': [],
-            'channels_processed': []
+            'errors': []
         }
         
     def detect_environment(self):
-        """Détecte si on est dans GitHub Actions ou en local"""
+        """Détecte l'environnement d'exécution"""
         if os.getenv('GITHUB_ACTIONS'):
-            logger.info("Environnement détecté: GitHub Actions")
+            logger.info("Environnement: GitHub Actions")
             return 'github_actions'
-        elif os.getenv('STREAMLIT_SERVER_HEADLESS'):
-            logger.info("Environnement détecté: Streamlit Cloud")
-            return 'streamlit_cloud'
         else:
-            logger.info("Environnement détecté: Local")
+            logger.info("Environnement: Local")
             return 'local'
     
     def setup_imports(self):
         """Configure les imports selon l'environnement"""
         try:
-            # Imports spécifiques à ton projet
-            from load import Load
-            from transformation import main_transformation
-
+            # Essayer différents chemins d'import
+            import_success = False
             
-            self.Load = Load
-            self.main_transformation = main_transformation
-            logger.info("Modules importés avec succès")
-            return True
+            # Tentative 1: Import direct
+            try:
+                from load import Load
+                from etl import main_etl
+                import_success = True
+                logger.info("Imports directs réussis")
+            except ImportError:
+                pass
             
-        except ImportError as e:
-            logger.error(f"Erreur d'import: {e}")
+            # Tentative 2: Import depuis src
+            if not import_success:
+                try:
+                    from src.utils.load import Load
+                    from src.Pipeline1.etl import main_etl
+                    import_success = True
+                    logger.info("Imports depuis src réussis")
+                except ImportError:
+                    pass
+            
+            # Tentative 3: Import avec chemins explicites
+            if not import_success:
+                try:
+                    sys.path.append(os.path.join(project_root, 'src', 'utils'))
+                    sys.path.append(os.path.join(project_root, 'src', 'Pipeline1'))
+                    from load import Load
+                    from etl import main_etl
+                    import_success = True
+                    logger.info("Imports avec chemins explicites réussis")
+                except ImportError as e:
+                    logger.error(f"Toutes les tentatives d'import ont échoué: {e}")
+                    return False
+            
+            if import_success:
+                self.Load = Load
+                self.main_etl = main_etl
+                return True
+            
+        except Exception as e:
+            logger.error(f"Erreur configuration imports: {e}")
             self.summary['errors'].append(f"Import error: {str(e)}")
             return False
     
-    def get_channels_to_process(self):
-        """Détermine quels channels traiter"""
-        if self.target_channel:
-            logger.info(f"Traitement du channel spécifique: {self.target_channel}")
-            return [self.target_channel]
-        
-        # Liste de tes channels configurés
-
-        channels = []
-        
-        # Option 1: Depuis variables d'environnement
-        channels_env = os.getenv('YOUTUBE_CHANNELS', '')
-        if channels_env:
-            channels = channels_env.split(',')
-        
-        # Option 2: Liste hardcodée (à adapter)
-        if not channels:
-            channels = [
-                'UCDkl5M0WVaddTWE4rr2cSeA',
-            ]
-        
-        logger.info(f"Channels à traiter: {len(channels)} - {channels}")
-        return channels
-    
-    def get_videos_for_channel(self, channel_id):
-        """Récupère les vidéos à traiter pour un channel"""
+    def get_existing_videos(self):
+        """Récupère les URLs des vidéos existantes dans la base"""
         try:
-            # Utiliser ton système existant pour récupérer les vidéos
-            # À adapter selon ton code d'extraction
-            
-            # Exemple simplifié - remplace par ton code réel
             loader = self.Load()
-            
             client = loader.data_base_connexion()
-
-            # etape 2 : récupérer les urls des vidéos de la base de données
-            list_urls = []
-            # id_lists = []  # pour stocker les derniers ids de commentaires
-
-            for db_name in client.list_database_names():
-                # logger.info(f"traitement base {db_name}")
-                if db_name in ("admin", "config", "local", "test"):  # filtrer les bases internes MongoDB
-                    # logger.info(f"bases trouvées {db_name}")
-                    continue
-                db = client[db_name]
-                # Lister toutes les collections de cette base
-                for collection in db.list_collection_names():
-                    # logger.info(f"traitement de la collection {collection}")
-                    db_collection = db[collection]
-                    # Récupérer l'URL de la vidéo à partir de la collection
-                    video_url = db_collection.find_one({}, {"url": 1, "_id": 0})
-                    logger.info(f"taille de video_url {len(video_url)}")
-                    if len(video_url)>0:
-                        list_urls.append(video_url['url'])
-                    else:
-                        pass # ajouter un truc pour ajouter les info s'il n'y a pas d'url ajouter un paramètre a main_etl
-            loader.data_base_deconnexion(client)
             
-            logger.info(f"Channel {channel_id}: {len(list_urls)} vidéos à traiter")
+            list_urls = []
+            
+            # Adapter selon l'architecture (cloud vs local)
+            try:
+                # Essayer d'importer streamlit_config (architecture cloud)
+                from streamlit_config import get_database_connections
+                db_config = get_database_connections()
+                target_db = db_config["mongodb"]["database"]
+                
+                # Mode cloud : une seule base
+                db = client[target_db]
+                for collection_name in db.list_collection_names():
+                    collection = db[collection_name]
+                    video_url_doc = collection.find_one({}, {"url": 1, "_id": 0})
+                    if video_url_doc and "url" in video_url_doc:
+                        list_urls.append(video_url_doc["url"])
+                        
+            except ImportError:
+                # Mode local : plusieurs bases
+                for db_name in client.list_database_names():
+                    if db_name in ("admin", "config", "local", "test"):
+                        continue
+                    
+                    db = client[db_name]
+                    for collection_name in db.list_collection_names():
+                        collection = db[collection_name]
+                        video_url_doc = collection.find_one({}, {"url": 1, "_id": 0})
+                        if video_url_doc and "url" in video_url_doc:
+                            list_urls.append(video_url_doc["url"])
+            
+            loader.data_base_deconnexion(client)
+            logger.info(f"URLs trouvées: {len(list_urls)}")
             return list_urls
             
         except Exception as e:
-            logger.error(f"Erreur récupération vidéos pour {channel_id}: {e}")
-            self.summary['errors'].append(f"Channel {channel_id}: {str(e)}")
+            logger.error(f"Erreur récupération URLs: {e}")
+            self.summary['errors'].append(f"URL retrieval: {str(e)}")
             return []
     
-    def process_video(self, channel_id, video_url):
-        """Traite une vidéo spécifique"""
+    def process_video_url(self, url):
+        """Traite une URL de vidéo"""
         try:
-            logger.info(f"Traitement de : {video_url} vidéos. (Channel: {channel_id})")
+            logger.info(f"Traitement: {url}")
             
-            # Étape 1: Extraction des données
-            # À remplacer par ton code d'extraction réel
-            # df_extracted = self.main_extraction(video_id, channel_id)
+            # Utiliser main_etl avec maj=True
+            result = self.main_etl(url, maj=True)
             
-            # Pour l'instant, simulation
-            df_extracted = video_url
-            
-            if df_extracted is None or df_extracted.empty:
-                logger.warning(f"Aucune donnée extraite pour {video_url.split("v=")[-1][:11]}")
-                return False
-            
-            # Étape 2: Transformation des données
-            df_transformed = main_etl(video_url, maj=True)
-            
-            if df_transformed.empty:
-                logger.warning(f"Aucune donnée après transformation pour {video_url.split("v=")[-1][:11]}")
-                return False
-            
-            # # Étape 3: Chargement en base
-            # loader = self.Load(maj=True)  # Mode mise à jour
-            # loader.load(df_transformed, video_id, channel_id)
-            
-            # Mise à jour des statistiques
-            self.summary['records_processed'] += len(df_transformed)
-            self.summary['videos_updated'] += 1
-            
-            logger.info(f"Vidéo {video_url} traitée avec succès: {len(df_transformed)} commentaires")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Erreur traitement vidéo {video_url}: {e}")
-            self.summary['errors'].append(f"Video {video_url}: {str(e)}")
-            return False
-    
-    def process_channel(self, channel_id):
-        """Traite un channel complet"""
-        try:
-            logger.info(f"Début traitement channel: {channel_id}")
-            
-            # Récupérer les vidéos à traiter
-            videos = self.get_videos_for_channel(channel_id)
-            
-            if not videos:
-                logger.info(f"Aucune vidéo à traiter pour le channel {channel_id}")
+            if result is not None:
+                self.summary['videos_updated'] += 1
+                logger.info(f"URL {url} traitée avec succès")
                 return True
-            
-            # Traiter chaque vidéo
-            success_count = 0
-            for video_url in videos:
-                if self.process_video(channel_id, video_url):
-                    success_count += 1
+            else:
+                logger.warning(f"URL {url} - résultat None")
+                return False
                 
-                # Pause pour éviter les limites de rate
-                import time
-                time.sleep(1)
-            
-            self.summary['channels_processed'].append({
-                'channel_id': channel_id,
-                'videos_processed': success_count,
-                'total_videos': len(videos)
-            })
-            
-            logger.info(f"Channel {channel_id} terminé: {success_count}/{len(videos)} vidéos traitées")
-            return True
-            
         except Exception as e:
-            logger.error(f"Erreur traitement channel {channel_id}: {e}")
-            self.summary['errors'].append(f"Channel {channel_id}: {str(e)}")
+            logger.error(f"Erreur traitement {url}: {e}")
+            self.summary['errors'].append(f"URL {url}: {str(e)}")
             return False
     
     def run_synchronization(self):
         """Exécute la synchronisation complète"""
-        logger.info("🚀 Début de la synchronisation YouTube")
+        logger.info("Début synchronisation YouTube")
         
-        # Vérifier l'environnement
+        # Détecter l'environnement
         env = self.detect_environment()
         
         # Configurer les imports
@@ -220,17 +179,30 @@ class YouTubeSynchronizer:
             logger.error("Impossible de configurer les imports")
             return False
         
-        # Récupérer les channels à traiter
-        channels = self.get_channels_to_process()
+        # Récupérer les URLs existantes
+        urls_to_process = self.get_existing_videos()
         
-        if not channels:
-            logger.error("Aucun channel à traiter")
-            return False
+        if not urls_to_process:
+            logger.warning("Aucune URL trouvée à traiter")
+            return True
         
-        # Traiter chaque channel
+        # Traiter chaque URL
         success = True
-        for channel_id in channels:
-            if not self.process_channel(channel_id):
+        processed_count = 0
+        
+        for url in urls_to_process:
+            try:
+                if self.process_video_url(url):
+                    processed_count += 1
+                else:
+                    success = False
+                
+                # Pause entre vidéos
+                import time
+                time.sleep(2)
+                
+            except Exception as e:
+                logger.error(f"Erreur critique pour {url}: {e}")
                 success = False
         
         # Finaliser
@@ -239,55 +211,40 @@ class YouTubeSynchronizer:
             datetime.fromisoformat(self.summary['end_time']) - 
             datetime.fromisoformat(self.summary['start_time'])
         ).total_seconds() / 60
+        self.summary['processed_count'] = processed_count
         
         self.save_summary()
         
         if success:
-            logger.info("✅ Synchronisation terminée avec succès")
+            logger.info(f"Synchronisation terminée: {processed_count} vidéos traitées")
         else:
-            logger.warning("⚠️ Synchronisation terminée avec des erreurs")
+            logger.warning(f"Synchronisation avec erreurs: {processed_count} vidéos traitées")
         
         return success
     
     def save_summary(self):
-        """Sauvegarde le résumé de l'exécution"""
+        """Sauvegarde le résumé"""
         try:
-            os.makedirs('logs', exist_ok=True)
-            
-            # Sauvegarder le summary en JSON
-            with open('logs/summary.json', 'w') as f:
+            with open('logs/summary.json', 'w', encoding='utf-8') as f:
                 json.dump(self.summary, f, indent=2, ensure_ascii=False)
             
-            # Log du résumé
-            logger.info("📊 Résumé de l'exécution:")
+            logger.info("Résumé de l'exécution:")
             logger.info(f"  - Durée: {self.summary.get('duration_minutes', 0):.1f} minutes")
-            logger.info(f"  - Records traités: {self.summary['records_processed']}")
-            logger.info(f"  - Vidéos mises à jour: {self.summary['videos_updated']}")
+            logger.info(f"  - Vidéos traitées: {self.summary.get('processed_count', 0)}")
             logger.info(f"  - Erreurs: {len(self.summary['errors'])}")
             
-            if self.summary['errors']:
-                logger.warning("Erreurs rencontrées:")
-                for error in self.summary['errors'][:5]:  # Limiter à 5 pour les logs
-                    logger.warning(f"  - {error}")
-            
         except Exception as e:
-            logger.error(f"Erreur sauvegarde summary: {e}")
+            logger.error(f"Erreur sauvegarde: {e}")
 
 def main():
     """Point d'entrée principal"""
     try:
-        # Créer le dossier logs si nécessaire
-        os.makedirs('logs', exist_ok=True)
-        
-        # Initialiser et lancer la synchronisation
         synchronizer = YouTubeSynchronizer()
         success = synchronizer.run_synchronization()
-        
-        # Code de sortie pour GitHub Actions
         sys.exit(0 if success else 1)
         
     except KeyboardInterrupt:
-        logger.info("Synchronisation interrompue par l'utilisateur")
+        logger.info("Synchronisation interrompue")
         sys.exit(1)
         
     except Exception as e:

@@ -5,9 +5,9 @@ from pymongo import MongoClient
 import json
 import pandas as pd
 import os
-from dotenv import load_dotenv
-from prefect import flow, task
-from prefect import get_run_logger
+# from dotenv import load_dotenv
+# from prefect import flow, task
+# from prefect import get_run_logger
 from pymongo import UpdateOne, DeleteMany, InsertOne, MongoClient
 # from .transformation import main_transformation
 # from .extraction import Extraction
@@ -24,7 +24,7 @@ except ImportError:
                 "database": os.getenv("MONGODB_DATABASE", "youtube-analysis")
             }
         }
-load_dotenv()
+# load_dotenv()
 
 
 class Load:
@@ -56,7 +56,7 @@ class Load:
     #     except FileNotFoundError:
     #         raise FileNotFoundError("Le fichier de configuration est introuvable.")
 
-    @task(name='data_base_connexion_task', description="Tâche de connexion à la base de données MongoDB", retries=3, retry_delay_seconds=5)
+    # @task(name='data_base_connexion_task', description="Tâche de connexion à la base de données MongoDB", retries=3, retry_delay_seconds=5)
     def data_base_connexion(self):
         """
         Fonction pour se connecter à la base de données MongoDB.
@@ -159,14 +159,14 @@ class Load:
             self.data_base_deconnexion(client)
 
         
-    @flow(name='load_data', description="Chargement des données dans MongoDB")
+    # @flow(name='load_data', description="Chargement des données dans MongoDB")
     def load(self, df, video_id:str, channel_id:str):
         """
     Charge les données d'un DataFrame dans MongoDB.
     - Si self.maj == True : suppression et réinsertion (mise à jour).
     - Sinon : insertion simple.
     """
-        logger = get_run_logger()
+        # logger = get_run_logger()
         # client = self.data_base_connexion()
         client = None
 
@@ -185,21 +185,21 @@ class Load:
             comments_data = df.to_dict('records') if not df.empty else []
             
             if not comments_data:
-                logger.warning("Aucune donnée à charger")
+                # logger.warning("Aucune donnée à charger")
                 return
             
             if self.maj:
-                logger.info("Mise à jour des données...")
+                # logger.info("Mise à jour des données...")
                 collection.delete_many({})
                 result = collection.insert_many(comments_data)
-                logger.info(f"{len(result.inserted_ids)} documents mis à jour")
+                # logger.info(f"{len(result.inserted_ids)} documents mis à jour")
             else:
-                logger.info("Insertion des données...")
+                # logger.info("Insertion des données...")
                 result = collection.insert_many(comments_data)
-                logger.info(f"{len(result.inserted_ids)} documents insérés")
+                # logger.info(f"{len(result.inserted_ids)} documents insérés")
                 
         except Exception as e:
-            logger.error(f"Erreur chargement : {e}")
+            # logger.error(f"Erreur chargement : {e}")
             raise e
         finally:
             if client:

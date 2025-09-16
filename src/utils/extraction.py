@@ -4,7 +4,7 @@ import os
 import time
 import pandas as pd
 from dotenv import load_dotenv
-from prefect import flow, task
+# from prefect import flow, task
 from googleapiclient.discovery import build
 from langdetect import detect
 from .load import Load
@@ -37,7 +37,7 @@ class Extraction :
             raise ValueError('Error : invalid YouTube URL')
 
 
-    @task(name='get_data_task', description="Tâche d'extraction des données YouTube")
+    # @task(name='get_data_task', description="Tâche d'extraction des données YouTube")
     # appel de l'API
     def get_data(self):
         logger = get_run_logger()
@@ -152,7 +152,7 @@ class Extraction :
         #logger.info(f"Total de commentaires récupérés : {df.shape[0]}")
         return df
     
-    @flow(name='extraction_pipeline', description="Pipeline d'extraction des données YouTube")
+    # @flow(name='extraction_pipeline', description="Pipeline d'extraction des données YouTube")
     def main_extraction(self):
         df = self.get_data_table()
         return df, self.video_id, self.channel_id
