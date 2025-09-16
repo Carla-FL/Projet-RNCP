@@ -8,7 +8,7 @@ rootdir = pathlib.Path(__file__).parent.parent.parent.parent.parent.resolve()
 import sys
 sys.path.append(str(rootdir))
 import streamlit as st
-from pages import page1_bis, page2
+from pages import page1, page2
 import streamlit as st
 from streamlit_config import initialize_streamlit_app, get_model_manager, add_debug_sidebar
 import pandas as pd
@@ -47,7 +47,7 @@ init_global_session_state()
 
 
 pages = {
-    " 1 - Accueil": page1_bis.main,
+    " 1 - Accueil": page1.main,
     " 2 - Analyse de sentiment": page2.main
 }
 

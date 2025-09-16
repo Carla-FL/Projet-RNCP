@@ -1,7 +1,7 @@
-"""_________________________________ Dashboard Page 1 ___________________________________"""
+import pathlib
+rootdir = pathlib.Path(__file__).parent.parent.parent.parent.resolve()
 import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(str(rootdir))
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
