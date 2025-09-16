@@ -38,7 +38,7 @@ class Extraction :
 
 
     # @task(name='get_data_task', description="Tâche d'extraction des données YouTube")
-    # appel de l'API
+    # appel de l'APIPREFECT_API_URL
     def get_data(self):
         # logger = get_run_logger()
         api_key = self.api_key # .get_key() #
