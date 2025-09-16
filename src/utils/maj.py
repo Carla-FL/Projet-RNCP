@@ -112,7 +112,7 @@ class YouTubeSynchronizer:
             # Adapter selon l'architecture (cloud vs local)
             try:
                 # Essayer d'importer streamlit_config (architecture cloud)
-                from streamlit_config import get_database_connections
+                from src.app.streamlit_config import get_database_connections
                 db_config = get_database_connections()
                 target_db = db_config["mongodb"]["database"]
                 
