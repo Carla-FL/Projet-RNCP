@@ -297,7 +297,7 @@ def perform_analysis(url):
     
     if not data_exists:
         st.info("Vidéo non trouvée, lancement de l'extraction...")
-        with st.spinner("Extraction en cours..."):
+        with st.spinner("Extraction en cours...", show_time=True):
             try:
                 channel_id = main_etl(url, with_channel_id=True)
                 if channel_id:
