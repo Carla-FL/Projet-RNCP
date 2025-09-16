@@ -33,15 +33,15 @@ def get_database_connections():
     return {
         # MongoDB Atlas
         "mongodb": {
-            "connection_string": get_secret("MONGODB_CONNECTION_STRING"),
+            "connection_string": get_secret("CONNECTING_STRING_ATLAS"),
             "database": get_secret("MONGODB_DATABASE", "youtube-analysis"),
-            "username": get_secret("MONGO_USERNAME"),
-            "password": get_secret("MONGO_PASSWORD"),
+            "username": get_secret("ATLAS_USERNAME"),
+            "password": get_secret("ATLAS_PASSWORD"),
         },
         
         # Neon PostgreSQL
         "postgresql": {
-            "connection_string": get_secret("POSTGRESQL_CONNECTION_STRING"),
+            "connection_string": get_secret("CONNECTING_STRING_NEON"),
             "host": get_secret("POSTGRES_HOST"),
             "database": get_secret("POSTGRES_DB", "prefect"),
             "username": get_secret("POSTGRES_USER", "prefect"),
@@ -172,7 +172,7 @@ def initialize_streamlit_app():
     logger = setup_logging()
     
     # Vérifier les configurations critiques
-    required_secrets = ["MONGODB_CONNECTION_STRING", "DEVELOPER_KEY", "HF_TOKEN"]
+    required_secrets = ["CONNECTING_STRING_ATLAS", "DEVELOPER_KEY", "HF_TOKEN"]
     missing_secrets = []
     
     for secret in required_secrets:
