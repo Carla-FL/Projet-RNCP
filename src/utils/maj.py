@@ -62,7 +62,7 @@ class YouTubeSynchronizer:
             # Tentative 1: Import direct
             try:
                 from load import Load
-                from etl import main_etl
+                from src.Pipeline1.etl import main_etl
                 import_success = True
                 logger.info("Imports directs réussis")
             except ImportError:
@@ -84,7 +84,7 @@ class YouTubeSynchronizer:
                     sys.path.append(os.path.join(project_root, 'src', 'utils'))
                     sys.path.append(os.path.join(project_root, 'src', 'Pipeline1'))
                     from load import Load
-                    from etl import main_etl
+                    from src.Pipeline1.etl import main_etl
                     import_success = True
                     logger.info("Imports avec chemins explicites réussis")
                 except ImportError as e:
