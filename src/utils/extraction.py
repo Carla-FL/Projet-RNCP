@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from googleapiclient.discovery import build
 from langdetect import detect
 from .load import Load
-from prefect.logging import get_run_logger
+# from prefect.logging import get_run_logger
 scopes = ["https://www.googleapis.com/auth/youtube.readonly"]
 load_dotenv()
 """ ________________________________________________________________  Fonctions  ________________________________________________________________"""
@@ -40,7 +40,7 @@ class Extraction :
     # @task(name='get_data_task', description="Tâche d'extraction des données YouTube")
     # appel de l'API
     def get_data(self):
-        logger = get_run_logger()
+        # logger = get_run_logger()
         api_key = self.api_key # .get_key() #
         youtube = build("youtube", "v3", developerKey=api_key)
 
@@ -55,7 +55,7 @@ class Extraction :
                 part="snippet,statistics",
                 id=video_id
             ).execute()
-            logger.info(f"Récupération des infos de la vidéo pour l'ID : {video_id}")
+            # logger.info(f"Récupération des infos de la vidéo pour l'ID : {video_id}")
         except Exception as e:
             raise RuntimeError(f"Impossible de récupérer les infos de la vidéo : {e}")
 
@@ -63,7 +63,7 @@ class Extraction :
             video_info = video_response["items"][0]["snippet"]
             self.channel_id = video_info["channelId"]
             # self.exisitng_comments_id =  Load().check_exisitng_data(self.channel_id, self.video_id)
-            logger.info(f"ID de la chaîne : {self.channel_id}")
+            # logger.info(f"ID de la chaîne : {self.channel_id}")
             
         except Exception as e:
             raise RuntimeError(f"Impossible de récupérer l'id de la chaine' : {e}")
@@ -92,12 +92,12 @@ class Extraction :
         
 
         # Étape 3 – Collecte des commentaires
-        # print("Langue valide \n"
-        # "Nombre de commentaires suffisant \n"
-        # "Récupération des commentaires en cours...")
-        logger.info("Langue valide \n"
+        print("Langue valide \n"
         "Nombre de commentaires suffisant \n"
         "Récupération des commentaires en cours...")
+        # logger.info("Langue valide \n"
+        # "Nombre de commentaires suffisant \n"
+        # "Récupération des commentaires en cours...")
 
         while True:
             response = youtube.commentThreads().list(
@@ -139,7 +139,7 @@ class Extraction :
             time.sleep(1)
 
         print(f'data uploaded')
-        logger.info(f'data uploaded')
+        # logger.info(f'data uploaded')
         return comments_data
 
     # Fonction pour créer un DataFrame à partir des données collectées
