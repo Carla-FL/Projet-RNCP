@@ -5,6 +5,7 @@
 use the app here : https://youreview.streamlit.app
 
 La question au coeur de ce projet est : 
+
 **Comment valoriser les retours clients via l’analyse automatisé des commentaires You Tube ?**
 
 Comme pour toutes les entreprises, les feedbacks permettent d’avoir des éléments d’amélioration de l’expérience client sur un produit ou un service. Ainsi, on sait pourquoi le client est satisfait ou non et on peut arbitrer entre poursuivre la vente du produit / service en priorisant les améliorations ou simplement stopper la vente. De la même manière, un influenceur You Tube utilise les indicateurs à sa disposition pour savoir si son contenu est aimé, vu (par ses abonnés, des spectateurs occasionnels …), combien de temps ses vidéos sont regardées, l’âge et le genre des spectateurs, les autres chaînes qu’ils regardent …. Autant d’informations permettant de dresser le profil de ses spectateurs et de savoir ce qu’ils apprécient. Les informations présentes dans les commentaires ont donc tout à fait leur place au sein de ces indicateurs.
@@ -13,6 +14,7 @@ Par conséquent, notre objectif est de mettre en place une infrastructure d’ex
 Notons qu'il existe déjà des outils permettant aux créateurs de contenus d'analyser l’engagement ou leur influence.
 
 **Enjeux et périmètre**
+
 Les enjeux de ce projet sont dans un premier temps de valoriser les retours « clients ». En effet, les commentaires sont des feedbacks qui révèlent les clés, les leviers de la satisfaction « client » et permettant d’aligner le contenu avec les attentes des clients. De manière plus large, cela permet d’améliorer la connaissance de sa communauté et donc d’orienter, de faire évoluer le contenu et de mieux choisir les partenariats. Etant donné que le métier d'influenceur est d'avantage un métier de passion, il s'agit surtout ici d'être plus à l'écoute de sa communauté, d'y puiser l'inspiration et de savoir le contenu est toujours aligné avec l'identité et les centres d'intérêt de sa communauté, plutôt que de faire des choix purement stratégiques et calculés.
 
 Dans un second temps, le flux de feedbacks étant continu et important, il s’agit de pouvoir mettre en place un processus de traitement et d’analyse scalable avec des mises à jour automatisées. 
